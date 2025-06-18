@@ -5,7 +5,7 @@ import MessageDisplay from './MessageDisplay';
 //  access environment variables
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-const AuthForm = () => {
+const AuthForm = ({onAuthSuccess}) => {
     const [isLogin, setIsLogin] = useState(true);
     const [showForgotPassword, setShowForgotPassword] = useState(false); 
     const [loginForm, setLoginForm] = useState({ email: '', password: '' });
@@ -83,9 +83,10 @@ const AuthForm = () => {
                 showMessage(data.message || 'Login successful!', 'success');
                 console.log('Login successful:', data);
                 setLoginForm({ email: '', password: '' }); // Clear form
-                // In a real app: Store token, redirect user
-                // localStorage.setItem('token', data.token);
-                // window.location.href = '/dashboard';
+                
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('user', JSON.stringify(data.user));
+                onAuthSuccess(data.token, data.user)
             } else {
                 showMessage(data.message || 'Login failed. Please try again.', 'error');
                 console.error('Login error:', data);
@@ -181,6 +182,8 @@ const AuthForm = () => {
             if (response.ok) {
                 
                 showMessage('If an account with that email exists, a password reset email has been sent. Check your inbox.', 'success');
+                
+                
                 setForgotPasswordEmail(''); // Clear email field
                 setShowForgotPassword(false); // Hide forgot password form
             } else {

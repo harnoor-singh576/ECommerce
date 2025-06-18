@@ -25,8 +25,16 @@ mongoose.connect(process.env.MONGO_URI).then(()=>{
 })
 
 // Routes
-const authRoutes= require("./routes/auth")
+const authRoutes= require("./routes/auth");
+const productRoutes = require("./routes/product")
+
 app.use('/api', authRoutes)
+app.use('/api/products', productRoutes)
+
+// API for testing
+app.get('/', (req,res)=>{
+    res.send("API is running....")
+})
 
 
 
