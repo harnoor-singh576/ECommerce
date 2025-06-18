@@ -1,0 +1,236 @@
+:root {
+    font-family: 'Roboto', sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+
+    color-scheme: light dark;
+    color: rgba(255, 255, 255, 0.87);
+    background-color: #242424;
+
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+
+    /* Custom CSS Variables for easier theming */
+    --primary-color: #2575fc;
+    --secondary-color: #6a11cb;
+    --text-color: #333;
+    --input-border: #ddd;
+    --error-color: #dc3545;
+    --success-color: #28a745;
+    --light-error-bg: #ffe6e6;
+    --light-success-bg: #e6ffe6;
+    --white: #fff;
+    --light-gray: #f0f0f0;
+    --dark-gray: #555;
+}
+
+body {
+    margin: 0;
+    display: flex;
+    place-items: center;
+    min-width: 320px;
+    min-height: 100vh;
+    background: rgb(195, 225, 234);
+}
+
+#root {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem; /* Add some padding around the container */
+    box-sizing: border-box; /* Include padding in element's total width and height */
+}
+
+.container {
+    background-color: var(--white);
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    color: var(--text-color); /* Ensure text is visible on white background */
+}
+
+.form-toggle {
+    display: flex;
+    margin-bottom: 30px;
+    border-radius: 5px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.form-toggle button {
+    flex: 1;
+    padding: 15px 0;
+    border: none;
+    background-color: var(--light-gray);
+    color: var(--dark-gray);
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    outline: none;
+}
+
+.form-toggle button.active {
+    background-color: var(--primary-color);
+    color: var(--white);
+    font-weight: bold;
+}
+
+h2 {
+    color: var(--text-color);
+    margin-bottom: 25px;
+    font-weight: 700;
+}
+
+.input-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--dark-gray);
+    font-weight: 400;
+}
+
+.input-group input {
+    width: calc(100% - 22px); /* Account for padding and border */
+    padding: 12px 10px;
+    border: 1px solid var(--input-border);
+    border-radius: 5px;
+    font-size: 1em;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.input-group input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 117, 252, 0.2);
+    outline: none;
+}
+
+button[type="submit"] {
+    width: 100%;
+    padding: 15px;
+    background-color: var(--primary-color);
+    color: var(--white);
+    border: none;
+    border-radius: 5px;
+    font-size: 1.1em;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    margin-top: 20px;
+    display: flex; /* For centering content and spinner */
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+button[type="submit"]:hover {
+    background-color: #1a5acb; /* A slightly darker primary color */
+    transform: translateY(-2px);
+}
+
+button[type="submit"]:active {
+    transform: translateY(0);
+}
+
+button[type="submit"]:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Message styles */
+.message {
+    margin-top: 20px;
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 0.95em;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.message.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.message.success {
+    background-color: var(--light-success-bg);
+    color: var(--success-color);
+    border: 1px solid var(--success-color);
+}
+
+.message.error {
+    background-color: var(--light-error-bg);
+    color: var(--error-color);
+    border: 1px solid var(--error-color);
+}
+
+/* Loading Spinner */
+.loading-spinner {
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top: 3px solid #fff;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.forgot-password-link {
+    margin-top: 15px;
+    text-align: center;
+}
+
+.forgot-password-link a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+.forgot-password-link a:hover {
+    text-decoration: underline;
+}
+
+button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* Basic responsiveness */
+@media (max-width: 600px) {
+    .container {
+        padding: 30px 20px;
+        margin: 0 15px; /* Add margin on smaller screens */
+    }
+
+    .form-toggle button {
+        font-size: 1em;
+        padding: 12px 0;
+    }
+
+    .input-group input {
+        font-size: 0.95em;
+        padding: 10px;
+    }
+
+    button[type="submit"] {
+        font-size: 1em;
+        padding: 12px;
+    }
+}
