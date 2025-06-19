@@ -1,13 +1,19 @@
 const express = require('express');
-const { addProduct, getMyProducts, getProducts } = require('../controllers/productController');
+const { addProduct, getMyProducts, getProducts, updateProduct, deleteProduct, getProductById } = require('../controllers/productController');
 const { protect } = require('../middlewares/authMiddleware');
 const router = express.Router();
 
-// Route to get all products
+// Public route
 router.get('/', getProducts);
 
-// Protected routes
+router.get('/my', protect, getMyProducts);
+router.get('/:id', getProductById)
+
+// Protected routes (basically it requires authentication)
 router.post('/', protect, addProduct);
-router.post('/my', protect, getMyProducts)
+
+router.put('/:id', protect, updateProduct);
+router.delete('/:id', protect, deleteProduct);
+
 
 module.exports = router;

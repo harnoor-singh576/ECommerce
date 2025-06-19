@@ -4,9 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import AuthForm from './components/AuthForm';
 import AddProductForm from './components/AddProductForm';
 import ProductList from './components/ProductList';
+import ProductDetail from './components/ProductDetail';
+import EditProductForm from './components/EditProductForm';
 import MyProductList from './components/MyProductList';
 import ResetPassword from './components/ResetPassword';
-
 import './index.css'; 
 
 function App() {
@@ -36,7 +37,8 @@ function App() {
             }
         }
         else{
-          if (window.location.pathname !== '/signup' && window.location.pathname !== '/login') {
+          if (window.location.pathname !== '/signup' && window.location.pathname !== '/login'  &&
+                !window.location.pathname.startsWith('/resetpassword/')) {
                 navigate('/login');
             }
         }
@@ -44,7 +46,7 @@ function App() {
     const handleAuthSuccess = (token, userData) => {
         setIsAuthenticated(true);
         setUser(userData);        
-        navigate('/add-product');
+        navigate('/products');
     };
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -55,12 +57,12 @@ function App() {
     };
      const handleProductAdded = (newProduct) => {
         console.log('Product added successfully in App:', newProduct);
-        navigate('/my-products');
+        navigate('/products');
      };
 
      const ProtectedRoute = ({ children }) => {
         if (!isAuthenticated) {
-           return navigate('/login');
+           return <Navigate to="/login" replace />;
         }
         return children;
      }
@@ -86,6 +88,8 @@ function App() {
                 >
                     Logout
                 </button>
+
+                
             )}
         <Routes>
           <Route path="/" element={<AuthForm onAuthSuccess={handleAuthSuccess} />} />            
@@ -108,7 +112,19 @@ function App() {
                         </ProtectedRoute>
                     }
                 />
-            <Route path="/products" element={<ProductList />} /> 
+            
+
+            <Route path="/products" element={<ProductList user={user} />} /> {/* Public list of all products */}
+            <Route path="/my-products" element={<ProtectedRoute><ProductList user={user} showMyProductsOnly={true} /></ProtectedRoute>} /> {/* Only user's products */}
+            <Route path="/products/:id" element={<ProductDetail user={user} />} /> {/* Single product detail */}
+            <Route
+                path="/edit-product/:id"
+                element={
+                    <ProtectedRoute>
+                        <EditProductForm user={user} />
+                    </ProtectedRoute>
+                }
+            />
             <Route path="*" element={<div>404 Not Found</div>} />           
         </Routes>
       </div>
