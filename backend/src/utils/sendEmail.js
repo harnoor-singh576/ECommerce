@@ -13,7 +13,7 @@ exports.sendEmail = async ({ email, subject, message }) => {
     from: process.env.EMAIL_USER,
     to: email,
     subject,
-    text: message,
+    html: message,
   };
 
   await transporter.sendMail(mailOptions);

@@ -97,6 +97,9 @@ exports.login = async (req, res) => {
 
 exports.forgotPassword = async (req,res)=> {
   const {email} = req.body || {};
+   if (!email) {
+        return res.status(400).json({ message: 'Please enter your email address.' });
+    }
   try{
     const user = await User.findOne({email});
     if(!user){
@@ -110,8 +113,13 @@ exports.forgotPassword = async (req,res)=> {
 
     // Create reset URL that will be sent to the user
     const resetURL = `${process.env.CLIENT_ORIGIN}/resetPassword/${resetToken}`;
-    const message = `You are receiving this email because you have requested the reset of a password. Please make a PUT request to: \n\n ${resetURL} \n\n This link will expire in 1 hour. If you did not request this, please ignore this email and your password will remain unchanged.`;
-
+     const message = `
+            <h1>You have requested a password reset</h1>
+            <p>Please go to this link to reset your password:</p>
+            <a href="${resetURL}" clicktracking=off>${resetURL}</a>
+            <p>This link will expire in 1 hour.</p>
+            <p>If you did not request this, please ignore this email.</p>
+        `;
     try{
       await sendEmail({
         email: user.email,

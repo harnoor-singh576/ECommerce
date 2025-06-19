@@ -239,7 +239,7 @@ button:disabled {
 .product-list-container {
     padding: 20px;
     max-width: 1200px;
-    margin: 0 auto;
+    margin: 30px auto;
 }
 
 .product-grid {
@@ -305,7 +305,7 @@ button:disabled {
     justify-content: center;
 }
 
-.edit-button, .delete-button {
+.edit-button, .delete-button,.add-button {
     padding: 8px 12px;
     border: none;
     border-radius: 5px;
@@ -325,6 +325,11 @@ button:disabled {
 
 .edit-button:hover {
     background-color: #0056b3;
+}
+
+.add-button{
+    background-color: bisque;
+    color: black;
 }
 
 .delete-button {
