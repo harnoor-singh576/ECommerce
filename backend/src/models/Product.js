@@ -18,8 +18,8 @@ const productSchema = new mongoose.Schema({
         maxlength: [1000, 'Product description cannot exceed 1000 characters']
     },
     image: {
-        type: String,
-        default: "https://picsum.photos/id/1/200/300"
+        type: String
+        
     },
     user: {
         type:mongoose.Schema.Types.ObjectId,

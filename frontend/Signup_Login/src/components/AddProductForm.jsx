@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import InputGroup from './InputGroup';
 import MessageDisplay from './MessageDisplay';
+import '../index.css'; 
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -101,7 +102,7 @@ const AddProductForm = ({ user, onProductAdded }) => { // Accepts user info and 
 
             <form onSubmit={handleSubmit}>
                 <InputGroup
-                    label="Product Name"
+                    label={<>Product Name <span className="required-star">*</span></>}
                     type="text"
                     id="product-name"
                     name="name"
@@ -111,7 +112,7 @@ const AddProductForm = ({ user, onProductAdded }) => { // Accepts user info and 
                     placeholder="e.g., Laptop, Smartphone"
                 />
                 <InputGroup
-                    label="Price"
+                    label={<>Price <span className="required-star">*</span></>}
                     type="number"
                     id="product-price"
                     name="price"
@@ -121,7 +122,7 @@ const AddProductForm = ({ user, onProductAdded }) => { // Accepts user info and 
                     placeholder="e.g., 999.99"
                 />
                 <InputGroup
-                    label="Description"
+                    label={<>Description <span className="required-star">*</span></>}
                     type="text" // Could be 'textarea' but for simplicity, using 'text' here
                     id="product-description"
                     name="description"
@@ -131,8 +132,8 @@ const AddProductForm = ({ user, onProductAdded }) => { // Accepts user info and 
                     placeholder="A brief description of the product."
                 />
                 <InputGroup
-                    label="Image URL (Optional)"
-                    type="text"
+                    label="Choose image (Optional)"
+                    type="file"
                     id="product-image"
                     name="image"
                     value={productForm.image}
