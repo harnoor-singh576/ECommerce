@@ -11,14 +11,6 @@ import EditProductPage from "./pages/EditProductPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 
-// import AuthForm from "./components/AuthForm";
-// import AddProductForm from "./components/AddProductForm";
-// import ProductList from "./components/ProductList";
-// import ProductDetail from "./components/ProductDetail";
-// import EditProductForm from "./components/EditProductForm";
-// import MyProductList from "./components/MyProductList";
-// import ResetPassword from "./components/ResetPassword";
-// import ForgotPasswordRequest from './components/ForgotPasswordRequest';
 import ProtectedRoute from "./components/ProtectedRoute";
 import "./index.css";
 
@@ -37,7 +29,7 @@ function App() {
         setIsAuthenticated(true);
         if (
           window.location.pathname === "/" ||
-          window.location.pathname === "/login"||          
+          window.location.pathname === "/login" ||
           window.location.pathname === "/signup"
         ) {
           navigate("/products");
@@ -109,9 +101,9 @@ function App() {
               position: "absolute",
               top: "20px",
               left: "20px",
-              
+
               zIndex: 100,
-              marginBottom: "20px"
+              marginBottom: "20px",
             }}
           >
             <ul
@@ -193,26 +185,29 @@ function App() {
         <Route path="/resetpassword/:token" element={<ResetPasswordPage />} />
 
         <Route path="/products" element={<AllProductsPage user={user} />} />
-        <Route path="/products/:id" element={<ProductDetailPage user={user} />} />
+        <Route
+          path="/products/:id"
+          element={<ProductDetailPage user={user} />}
+        />
 
         <Route
           path="/add-product"
           element={
-            <ProtectedRoute isAuthenticated={isAuthenticated}> 
+            <ProtectedRoute isAuthenticated={isAuthenticated}>
               <AddProductPage user={user} onProductAdded={handleProductAdded} />
             </ProtectedRoute>
           }
         />
-        
+
         <Route
           path="/my-products"
           element={
-            <ProtectedRoute isAuthenticated={isAuthenticated}> 
+            <ProtectedRoute isAuthenticated={isAuthenticated}>
               <MyProductsPage user={user} />
             </ProtectedRoute>
           }
         />
-                
+
         <Route
           path="/edit-product/:id"
           element={
