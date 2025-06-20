@@ -48,10 +48,10 @@ const EditProductForm = ({ user }) => {
                         name: data.product.name,
                         price: data.product.price,
                         description: data.product.description,
-                        image: data.product.image
+                        image: data.product.image || ''
                     });
                     // Client-side owner check for UX (backend provides ultimate security)
-                    if (user && data.product.user._id !== user._id) {
+                    if (user && data.product.user && data.product.user._id !== user.id) {
                         showMessage('You are not authorized to edit this product.', 'error');
                         navigate('/products'); // Redirect if not owner
                     }

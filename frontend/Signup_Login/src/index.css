@@ -402,7 +402,7 @@ button:disabled {
 
 /* Add to your existing CSS file, e.g., index.css */
 .cancel-button {
-    background-color: #6c757d;
+    background-color: rgb(212, 15, 15);
     color: white;
     padding: 10px 15px;
     border: none;
@@ -410,6 +410,7 @@ button:disabled {
     cursor: pointer;
     margin-left: 10px;
     transition: background-color 0.2s ease;
+    margin-top: 10px;
 }
 .cancel-button:hover {
     background-color: #5a6268;

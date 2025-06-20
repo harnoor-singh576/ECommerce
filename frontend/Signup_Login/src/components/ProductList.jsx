@@ -73,7 +73,7 @@ const ProductList = ({ user, showMyProductsOnly = false }) => {
   };
   useEffect(() => {
     fetchProducts();
-  }, [showMyProductsOnly, user?._id]);
+  }, [showMyProductsOnly, user?.id]);
 
   const handleDelete = async (productId) => {
     if (!window.confirm("Are you sure you want to delete this product?")) {
@@ -127,60 +127,115 @@ const ProductList = ({ user, showMyProductsOnly = false }) => {
         </p>
       ) : (
         <div className="product-grid">
-          {products.map((product) => (
-            
-            <div key={product._id} className="product-card">
+          {products.map((product) => {
+            let productOwnerId = null;
+            if (product.user) {
+              if (typeof product.user === "object" && product.user !== null) {
+                productOwnerId = product.user._id;
+              } else if (typeof product.user === "string") {
+                productOwnerId = product.user;
+              }
+            }
+
+            const currentUserId = user?.id;
+
+            {console.log("--- ID Comparison Debug ---")}
+                {console.log("Logged in user object:", user)}
+                {console.log(
+                  "Logged in user ID:",
+                  user ? user._id : "Not logged in"
+                )}
+                {console.log("Product object:", product)}
+                {console.log(
+                  "Product owner object (from product.user):",
+                  product.user
+                )}
+                {console.log(
+                  "Product owner ID:",
+                  product.user ? product.user._id : "Owner not populated/found"
+                )}
+                {console.log(
+                  "Are IDs equal?",
+                  user && product.user && user._id == product.user._id
+                )}
+                {console.log("Current user id:", user?.id)}
+                {console.log("Product user id:", product.user?._id)}
+                {console.log("Product id:", product._id)}
+                {console.log(
+                  "Type of user ID:",
+                  typeof (user?._id || user?.id)
+                )}
+                {console.log(
+                  "Type of product owner ID:",
+                  typeof (product.user?._id || product.user?.id)
+                )}
+                {console.log(
+                  "Comparison (user._id === product.user._id):",
+                  user?._id === product.user?._id
+                )}
+                {console.log(
+                  "Comparison (user.id === product.user._id):",
+                  user?.id === product.user?._id
+                )}
+                {console.log(
+                  "Comparison (user._id === product.user.id):",
+                  user?._id === product.user?.id
+                )}
+                {console.log(
+                  "Comparison (user.id === product.user.id):",
+                  user?.id === product.user?.id
+                )}
+                {console.warn(
+                  "Product.user is null or undefined for product:",
+                  product.name,
+                  product._id
+                )}
+                if (!product.user) { // This is your original warning check, keep it if you want to be alerted of backend issues
+              console.warn("Product.user is null or undefined for product:", product.name, product._id);
+          }
+                {console.log("--- End ID Comparison Debug ---")};
+
+                const isOwner = currentUserId && productOwnerId && currentUserId === productOwnerId;
+            return (
+              <div key={product._id} className="product-card">
                 
+                <img
+                  src={product.image}
+                  alt={product.name}
+                  className="product-image"
+                />
+                <h3>{product.name}</h3>
+                <p className="product-price">₹{product.price.toFixed(2)}</p>
+                <p className="product-description">{product.description}</p>
+                <small>
+                  Added by:{" "}
+                  {product.user && typeof product.user === 'object' ? 
+                     (product.user.username || product.user.email || "Unknown") : 
+                     "Unknown"}
+                </small>
                 
-              {console.log(
-                "Logged in user ID:",
-                user ? user._id : "Not logged in"
-              )}
-              {console.log(
-                "Product owner ID:",
-                product.user ? product.user._id : "Owner not populated/found"
-              )}
-              {console.log(
-                "Are IDs equal?",
-                user && product.user && user._id == product.user._id
-              )}
-              {console.log("Current user id:", user?.id)}
-              {console.log("Product user id:", product.user?._id)}
-              {console.log("Product id:", product._id)}
+                {isOwner && (
+                  <div className="product-actions">
+                    {console.log(`Rendering buttons for product: ${product.name} (ID: ${product._id})`)}
+                    {console.log("Product ID:", product._id)}
+                    <Link
+                      to={`/edit-product/${product._id}`}
+                      className="edit-button"
+                    >
+                      Edit
+                    </Link>
 
-              <img
-                src={product.image}
-                alt={product.name}
-                className="product-image"
-              />
-              <h3>{product.name}</h3>
-              <p className="product-price">₹{product.price.toFixed(2)}</p>
-              <p className="product-description">{product.description}</p>
-              <small>
-                Added by:{" "}
-                {product.user?.username || product.user?.email || "Unknown"}
-              </small>
-
-              {user && product.user && user.id == product.user._id && (
-                <div className="product-actions">
-                  {console.log("Product ID:", product._id)}
-                  <Link
-                    to={`/edit-product/${product._id}`}
-                    className="edit-button"
-                  >
-                    Edit
-                  </Link>
-
-                  <button
-                    onClick={() => handleDelete(product._id)}
-                    className="delete-button"
-                  >
-                    Delete
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
+                    <button
+                      onClick={() => handleDelete(product._id)}
+                      className="delete-button"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
