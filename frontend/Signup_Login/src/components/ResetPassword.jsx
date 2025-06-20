@@ -15,7 +15,7 @@ const ResetPassword = () => {
     const [messageType, setMessageType] = useState('');
     const [messageActive, setMessageActive] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [tokenValid, setTokenValid] = useState(false); // To check initial token validity (optional but good UX)
+    const [tokenValid, setTokenValid] = useState(false); 
 
     // Function to display messages
     const showMessage = (msg, type) => {
@@ -33,6 +33,7 @@ const ResetPassword = () => {
     // For a more robust check, you could send a HEAD or GET request to the backend with the token
     // to verify if it's a known token and not expired. For simplicity, we'll let the PUT request handle it.
     useEffect(() => {
+        console.log("ResetPasswordPage useEffect running. Token from URL:", token);
         if (token) {
             setTokenValid(true); // Assume valid until API tells us otherwise
         } else {
@@ -67,7 +68,7 @@ const ResetPassword = () => {
         }
 
         try {
-            const response = await fetch(`${API_BASE_URL}/api/auth/resetpassword/${token}`, {
+            const response = await fetch(`${API_BASE_URL}/resetpassword/${token}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

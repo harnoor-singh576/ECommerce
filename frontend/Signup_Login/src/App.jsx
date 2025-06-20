@@ -22,15 +22,26 @@ function App() {
   useEffect(() => {
     const token = localStorage.getItem("token");
     const storedUser = localStorage.getItem("user");
+    const currentPath = window.location.pathname;
+    console.log("App useEffect running. Path:", currentPath, "Authenticated:", !!token); 
+    const PUBLIC_PATHS = [
+      "/login",
+      "/signup",
+      "/forgotpassword",
+      "/resetPassword/", 
+    ];
+    const isPublicPath = PUBLIC_PATHS.some(pathPrefix =>
+      currentPath.startsWith(pathPrefix)
+    );
+    console.log("isPublicPath:", isPublicPath);
     if (token && storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
         setIsAuthenticated(true);
         if (
-          window.location.pathname === "/" ||
-          window.location.pathname === "/login" ||
-          window.location.pathname === "/signup"
+          currentPath === "/" ||
+          isPublicPath
         ) {
           navigate("/products");
         }
@@ -44,14 +55,28 @@ function App() {
         navigate("/login");
       }
     } else {
-      // If not authenicated
-      if (
-        window.location.pathname !== "/signup" &&
-        window.location.pathname !== "/login" &&
-        !window.location.pathname.startsWith("/resetpassword/") &&
-        window.location.pathname !== "/forgotpassword"
-      ) {
+      // If not authenticated, ensure we only redirect to login if we are on a protected route
+      // or a route that shouldn't be accessed unauthenticated (other than auth-related ones).
+      // const allowedUnauthenticatedPaths = [
+      //   "/login",
+      //   "/signup",
+      //   "/forgotpassword",
+
+      //   // "/resetpassword/",
+      // ];
+      // const isAllowedUnauthenticatedPath =
+      //   allowedUnauthenticatedPaths.some((path) =>
+      //     currentPath.startsWith(path)
+      //   ) || currentPath.startsWith("/resetpassword/");
+      console.log("User is NOT authenticated.");
+      if (currentPath === "/") {
+        console.log("Unauthenticated user on root. Navigating to /login.");
         navigate("/login");
+      } else if (!isPublicPath) {
+        console.log("Unauthenticated user on non-public path. Navigating to /login.");
+        navigate("/login");
+      }else{
+        console.log("Unauthenticated user on public path. Allowing access.");
       }
     }
   }, [navigate]);
@@ -169,10 +194,8 @@ function App() {
         </>
       )}
       <Routes>
-        <Route
-          path="/"
-          element={<LoginPage onAuthSuccess={handleAuthSuccess} />}
-        />
+        <Route path="/forgotpassword" element={<ForgotPasswordPage />} />
+        <Route path="/resetpassword/:token" element={<ResetPasswordPage />} />
         <Route
           path="/login"
           element={<LoginPage onAuthSuccess={handleAuthSuccess} />}
@@ -181,8 +204,10 @@ function App() {
           path="/signup"
           element={<LoginPage onAuthSuccess={handleAuthSuccess} />}
         />
-        <Route path="/forgotpassword" element={<ForgotPasswordPage />} />
-        <Route path="/resetpassword/:token" element={<ResetPasswordPage />} />
+        <Route
+          path="/"
+          element={<LoginPage onAuthSuccess={handleAuthSuccess} />}
+        />
 
         <Route path="/products" element={<AllProductsPage user={user} />} />
         <Route

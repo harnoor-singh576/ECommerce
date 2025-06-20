@@ -10,6 +10,6 @@ const { signup, login, forgotPassword, resetToken } = require('../controllers/au
 router.post('/signup', signup)
 router.post('/login', login)
 router.post('/forgotpassword', forgotPassword)
-router.put('/resetpassword/:token', resetToken)
+router.put('/resetPassword/:token', resetToken)
 
 module.exports = router;
