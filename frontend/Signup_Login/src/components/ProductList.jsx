@@ -139,66 +139,24 @@ const ProductList = ({ user, showMyProductsOnly = false }) => {
 
             const currentUserId = user?.id;
 
-            {console.log("--- ID Comparison Debug ---")}
-                {console.log("Logged in user object:", user)}
-                {console.log(
-                  "Logged in user ID:",
-                  user ? user._id : "Not logged in"
-                )}
-                {console.log("Product object:", product)}
-                {console.log(
-                  "Product owner object (from product.user):",
-                  product.user
-                )}
-                {console.log(
-                  "Product owner ID:",
-                  product.user ? product.user._id : "Owner not populated/found"
-                )}
-                {console.log(
-                  "Are IDs equal?",
-                  user && product.user && user._id == product.user._id
-                )}
-                {console.log("Current user id:", user?.id)}
-                {console.log("Product user id:", product.user?._id)}
-                {console.log("Product id:", product._id)}
-                {console.log(
-                  "Type of user ID:",
-                  typeof (user?._id || user?.id)
-                )}
-                {console.log(
-                  "Type of product owner ID:",
-                  typeof (product.user?._id || product.user?.id)
-                )}
-                {console.log(
-                  "Comparison (user._id === product.user._id):",
-                  user?._id === product.user?._id
-                )}
-                {console.log(
-                  "Comparison (user.id === product.user._id):",
-                  user?.id === product.user?._id
-                )}
-                {console.log(
-                  "Comparison (user._id === product.user.id):",
-                  user?._id === product.user?.id
-                )}
-                {console.log(
-                  "Comparison (user.id === product.user.id):",
-                  user?.id === product.user?.id
-                )}
-                {console.warn(
-                  "Product.user is null or undefined for product:",
-                  product.name,
-                  product._id
-                )}
-                if (!product.user) { // This is your original warning check, keep it if you want to be alerted of backend issues
-              console.warn("Product.user is null or undefined for product:", product.name, product._id);
-          }
-                {console.log("--- End ID Comparison Debug ---")};
+            if (!product.user) {
+              // This is your original warning check, keep it if you want to be alerted of backend issues
+              console.warn(
+                "Product.user is null or undefined for product:",
+                product.name,
+                product._id
+              );
+            }
+            {
+              console.log("--- End ID Comparison Debug ---");
+            }
 
-                const isOwner = currentUserId && productOwnerId && currentUserId === productOwnerId;
+            const isOwner =
+              currentUserId &&
+              productOwnerId &&
+              currentUserId === productOwnerId;
             return (
               <div key={product._id} className="product-card">
-                
                 <img
                   src={product.image}
                   alt={product.name}
@@ -209,14 +167,16 @@ const ProductList = ({ user, showMyProductsOnly = false }) => {
                 <p className="product-description">{product.description}</p>
                 <small>
                   Added by:{" "}
-                  {product.user && typeof product.user === 'object' ? 
-                     (product.user.username || product.user.email || "Unknown") : 
-                     "Unknown"}
+                  {product.user && typeof product.user === "object"
+                    ? product.user.username || product.user.email || "Unknown"
+                    : "Unknown"}
                 </small>
-                
+
                 {isOwner && (
                   <div className="product-actions">
-                    {console.log(`Rendering buttons for product: ${product.name} (ID: ${product._id})`)}
+                    {console.log(
+                      `Rendering buttons for product: ${product.name} (ID: ${product._id})`
+                    )}
                     {console.log("Product ID:", product._id)}
                     <Link
                       to={`/edit-product/${product._id}`}

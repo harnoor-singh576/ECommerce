@@ -35,8 +35,7 @@ const EditProductForm = ({ user }) => {
 
     // Fetch product data on component mount
     useEffect(() => {
-        console.log('EditProductForm useEffect triggered. User:', user);
-        console.log('Loading state:', loading);
+        
         const fetchProduct = async () => {
             setLoading(true);
             try {

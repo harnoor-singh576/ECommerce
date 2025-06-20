@@ -54,22 +54,30 @@ function App() {
       "/forgotpassword",
       "/resetpassword/", // Note: This needs to match the route definition
     ];
-    const isPublicPath = PUBLIC_PATHS.some(pathPrefix =>
+    const isPublicPath = PUBLIC_PATHS.some((pathPrefix) =>
       currentPath.startsWith(pathPrefix)
     );
 
     if (!isAuthenticated && !isPublicPath) {
       // If not authenticated AND on a protected path, redirect to login
-      if (currentPath !== "/") { // Prevent double redirect if already handled by BrowserRouter default
-        console.log("App Init: Not authenticated on protected path, redirecting to /login");
+      if (currentPath !== "/") {
+        // Prevent double redirect if already handled by BrowserRouter default
+        console.log(
+          "App Init: Not authenticated on protected path, redirecting to /login"
+        );
         navigate("/login", { replace: true });
-      } else { // Handle root path specifically for unauthenticated users
-        console.log("App Init: Not authenticated on root, redirecting to /login");
+      } else {
+        // Handle root path specifically for unauthenticated users
+        console.log(
+          "App Init: Not authenticated on root, redirecting to /login"
+        );
         navigate("/login", { replace: true });
       }
     } else if (isAuthenticated && (currentPath === "/" || isPublicPath)) {
       // If authenticated AND on a public path (like login/signup), redirect to products
-      console.log("App Init: Authenticated on public path, redirecting to /products");
+      console.log(
+        "App Init: Authenticated on public path, redirecting to /products"
+      );
       navigate("/products", { replace: true });
     }
   }, []); // Empty dependency array means this runs once on mount
@@ -77,14 +85,19 @@ function App() {
   // Additional useEffect for `isAuthenticated` changes, if any logic depends on it
   // This helps with initial rendering after login/logout
   useEffect(() => {
-      // If the user logs out, make sure they are redirected if they are on a protected page
-      if (!isAuthenticated && !window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/signup') && !window.location.pathname.startsWith('/forgotpassword') && !window.location.pathname.startsWith('/resetpassword')) {
-          // navigate('/login', { replace: true });
-          // Removed this line as the initial useEffect and ProtectedRoute should handle
-          // leaving it here could cause unnecessary redirects/reloads
-      }
+    // If the user logs out, make sure they are redirected if they are on a protected page
+    if (
+      !isAuthenticated &&
+      !window.location.pathname.startsWith("/login") &&
+      !window.location.pathname.startsWith("/signup") &&
+      !window.location.pathname.startsWith("/forgotpassword") &&
+      !window.location.pathname.startsWith("/resetpassword")
+    ) {
+      // navigate('/login', { replace: true });
+      // Removed this line as the initial useEffect and ProtectedRoute should handle
+      // leaving it here could cause unnecessary redirects/reloads
+    }
   }, [isAuthenticated, navigate]);
-
 
   const handleAuthSuccess = (token, userData) => {
     setIsAuthenticated(true);

@@ -109,7 +109,7 @@ exports.forgotPassword = async (req, res) => {
       });
     }
     const resetToken = user.getResetPasswordToken();
-    console.log(resetToken);
+
     await user.save({ validateBeforeSave: false });
 
     // Create reset URL that will be sent to the user
@@ -150,20 +150,18 @@ exports.forgotPassword = async (req, res) => {
 };
 
 exports.resetToken = async (req, res) => {
-  const { token } = req.params; 
+  const { token } = req.params;
   const { newPassword } = req.body;
   const resetPasswordToken = crypto
     .createHash("sha256")
     .update(req.params.token)
     .digest("hex");
-  console.log(resetPasswordToken);
 
   try {
     const user = await User.findOne({
       resetPasswordToken,
       resetPasswordExpires: { $gt: Date.now() },
     });
-    console.log(user);
 
     if (!user) {
       return res.status(400).json({
