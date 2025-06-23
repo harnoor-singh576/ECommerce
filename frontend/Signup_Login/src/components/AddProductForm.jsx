@@ -30,7 +30,11 @@ const AddProductForm = ({ user, onProductAdded }) => {
   };
 
   const handleChange = (e) => {
-    setProductForm({ ...productForm, [e.target.name]: e.target.value });
+    const { name, value, type, files } = e.target;
+    setProductForm((prevForm) => ({
+      ...prevForm,
+      [name]: type === "file" ? files[0] : value, // Store the File object
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -42,16 +46,27 @@ const AddProductForm = ({ user, onProductAdded }) => {
     const { name, price, description, image } = productForm;
 
     // Client-side validation
-    if (!name || !price || !description) {
+    if (!name || !price || !description || !image) {
       showMessage(
-        "Please fill in all required fields (Name, Price, Description).",
+        "Please fill in all required fields and select an image.",
         "error"
       );
       setLoading(false);
       return;
     }
-    if (isNaN(price) || parseFloat(price) < 0) {
+    if (isNaN(price) || parseFloat(price) <= 0) {
       showMessage("Price must be a positive number.", "error");
+      setLoading(false);
+      return;
+    }
+    if (image && !image.type.startsWith("image/")) {
+      showMessage("Please select a valid image file.", "error");
+      setLoading(false);
+      return;
+    }
+    if (image && image.size > 5 * 1024 * 1024) {
+      // 5 MB limit
+      showMessage("Image file size must not exceed 5MB.", "error");
       setLoading(false);
       return;
     }
@@ -64,6 +79,12 @@ const AddProductForm = ({ user, onProductAdded }) => {
       return;
     }
 
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("description", description);
+    formData.append("price", price);
+    formData.append("image", image); // Append the File obj
+
     try {
       const response = await fetch(`${API_BASE_URL}/products`, {
         method: "POST",
@@ -71,19 +92,14 @@ const AddProductForm = ({ user, onProductAdded }) => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`, // *** IMPORTANT: Send the JWT token ***
         },
-        body: JSON.stringify({
-          name,
-          price: parseFloat(price),
-          description,
-          image,
-        }),
+        body: formData,
       });
 
       const data = await response.json();
 
       if (response.ok) {
         showMessage(data.message || "Product added successfully!", "success");
-        setProductForm({ name: "", price: "", description: "", image: "" }); // Clear form
+        setProductForm({ name: "", price: "", description: "", image: null }); // Clear form
         console.log("Product added:", data.product);
         if (onProductAdded) {
           onProductAdded(data.product); // Notify parent (App.jsx) if needed
@@ -159,13 +175,14 @@ const AddProductForm = ({ user, onProductAdded }) => {
           placeholder="A brief description of the product."
         />
         <InputGroup
-          label="Choose image (Optional)"
+          label="Choose image"
           type="file"
           id="product-image"
           name="image"
           value={productForm.image}
           onChange={handleChange}
-          placeholder="e.g., https://example.com/image.jpg"
+          accept="image/*" // Accept only image files
+          required
         />
 
         <button type="submit" disabled={loading || !user}>

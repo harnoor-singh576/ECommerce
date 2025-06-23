@@ -138,6 +138,10 @@ const ProductList = ({ user, showMyProductsOnly = false }) => {
             }
 
             const currentUserId = user?.id;
+            const isOwner =
+              currentUserId &&
+              productOwnerId &&
+              currentUserId === productOwnerId;
 
             if (!product.user) {
               // This is your original warning check, keep it if you want to be alerted of backend issues
@@ -151,14 +155,10 @@ const ProductList = ({ user, showMyProductsOnly = false }) => {
               console.log("--- End ID Comparison Debug ---");
             }
 
-            const isOwner =
-              currentUserId &&
-              productOwnerId &&
-              currentUserId === productOwnerId;
             return (
               <div key={product._id} className="product-card">
                 <img
-                  src={product.image}
+                  src={`${API_BASE_URL}/${product.image.replace(/\\/g, "/")}`}
                   alt={product.name}
                   className="product-image"
                 />

@@ -18,6 +18,7 @@ const productSchema = new mongoose.Schema({
   },
   image: {
     type: String,
+    
   },
   user: {
     type: mongoose.Schema.Types.ObjectId,
@@ -28,6 +29,15 @@ const productSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  updatedAt: {
+        type: Date,
+        default: Date.now,
+  }
+});
+
+productSchema.pre('save', function(next) {
+    this.updatedAt = Date.now();
+    next();
 });
 
 const Product = mongoose.model("Product", productSchema);

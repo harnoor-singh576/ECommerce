@@ -9,13 +9,17 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middlewares
-app.use(express.json());
+
 const corsOptions = {
   origin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
   methods: "GET,POST,PUT,DELETE",
   credentials: true,
 };
 app.use(cors(corsOptions));
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+
+app.use('/uploads', express.static('uploads'))
 
 // Database connection
 mongoose
