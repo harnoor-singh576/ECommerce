@@ -27,6 +27,14 @@ const userSchema = new mongoose.Schema({
     required: [true, "Please add a password"],
     minLength: 8,
   },
+  mfaEnabled: {
+    type: Boolean,
+    default: false,
+  },
+  mfaSecret: {
+    type: String,
+    default: null, // will store the base32 encoded secret
+  },
   createdAt: {
     type: Date,
     default: Date.now,

@@ -18,6 +18,9 @@ import "./index.css";
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(
+    localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")) : null
+  );
   const navigate = useNavigate();
 
   useEffect(() => {

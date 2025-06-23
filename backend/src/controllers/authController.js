@@ -2,6 +2,8 @@ const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const { sendEmail } = require("../utils/sendEmail");
 const crypto = require("crypto");
+const speakeasy = require("speakeasy");
+const QRCode = require("qrcode");
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -9,6 +11,7 @@ const generateToken = (id) => {
   });
 };
 
+// Signup logic
 exports.signup = async (req, res) => {
   const { username, email, password } = req.body;
 
@@ -55,8 +58,9 @@ exports.signup = async (req, res) => {
   }
 };
 
+// Login logic
 exports.login = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, mfaToken } = req.body;
   if (!email || !password) {
     return res.status(400).json({
       message: "Please enter all fields",
@@ -76,6 +80,30 @@ exports.login = async (req, res) => {
         message: "Incorrect password",
       });
     }
+
+    // --- MFA logic ---
+    if (user.mfaEnabled) {
+      if (!mfaToken) {
+        return res.status(401).json({
+          message: "MFA is enabled. Please provide an MFA token.",
+        });
+      }
+      // Verify the MFA token
+      const isMfaValid = speakeasy.totp.verify({
+        secret: user.mfaSecret,
+        encoding: "base32",
+        token: mfaToken,
+        window: 1,
+      });
+      if (!isMfaValid) {
+        return res.status(400).json({
+          message: "Invalid MFA token. Please try again...",
+        });
+      }
+      //MFA token is valid, proceed with login
+      // Generate token and send response
+    }
+    // User does not have MFA enabled, proceed with normal login
     const token = generateToken(user._id);
     res.status(200).json({
       message: "Login successful",
@@ -84,12 +112,153 @@ exports.login = async (req, res) => {
         id: user._id,
         username: user.username,
         email: user.email,
+        mfaEnabled: user.mfaEnabled,
       },
     });
   } catch (error) {
     console.log("Server Login error: ", error);
     res.status(500).json({
       message: "Internal Server error during login",
+    });
+  }
+};
+
+// Logic to initiate MFA setup : GENERATE SECRET AND QR CODE
+exports.initiateMfaSetup = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    if (user.mfaEnabled) {
+      return res.status(400).json({
+        message: "MFA is already enabled for this account",
+      });
+    }
+
+    // Generate a new secret for the user
+    const secret = speakeasy.generateSecret({
+      length: 20,
+      name: `Stylo (${user.email})`,
+      symbols: false,
+    });
+
+    user.mfaSecret = secret.base32;
+    await user.save(); //save the secret
+
+    // Generate QR Code URL for the authenticator app
+    const qrCodeURL = await QRCode.toDataURL(secret.otpauth_url);
+
+    res.status(200).json({
+      secret: secret.base32,
+      qrCodeURL: qrCodeURL,
+      message: "Scan this QR code with your authenticator app.",
+    });
+  } catch (error) {
+    console.error("MFA setup initiation error: ", error);
+    res.status(500).json({
+      message: "Server error during MFA setup initiation.",
+    });
+  }
+};
+
+// Logic to Complete MFA Setup: VERIFY CODE AND ENABLE MFA
+exports.completeMFASetup = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { token } = req.body; //The 6-digit code from an authenticator app
+
+    if (!token) {
+      return res.status(400).json({
+        message: "Please provide the MFA token.",
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found.",
+      });
+    }
+    if (user.mfaEnabled) {
+      return res.status(400).json({
+        message: "MFA is already enabled for this account.",
+      });
+    }
+    if (!user.mfaSecret) {
+      return res.status(400).json({
+        message: "MFA setup is not initiated. Please do it first...",
+      });
+    }
+
+    // Verify the provided token against the stored token
+    const verified = speakeasy.totp.verify({
+      secret: user.mfaSecret,
+      encoding: "base32",
+      token,
+      window: 1, //Allow for small time skew
+    });
+
+    if (verified) {
+      user.mfaEnabled = true;
+      await user.save();
+      res.status(200).json({
+        message: "MFA Successfully enabled!",
+      });
+    } else {
+      // If the verification fails
+      res.status(400).json({
+        mfaSecret: null,
+        message: "Invalid MFA token. Please try again...",
+      });
+    }
+  } catch (error) {
+    console.error("MFA setup completion error: ", error);
+    res.status(500).json({
+      message: "Server error during MFA setup completion error.",
+    });
+  }
+};
+
+// Logic to disable MFA for a user
+exports.disableMFA = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { password } = req.body;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found!",
+      });
+    }
+    if (!user.mfaEnabled) {
+      return res.status(400).json({
+        message: "MFA is not enabled for this account.",
+      });
+    }
+
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({
+        message: "Incorrect password. Cannot disable MFA.",
+      });
+    }
+
+    user.mfaEnabled = false;
+    user.mfaSecret = null;
+    await user.save();
+    res.status(200).json({
+      message: "MFA Successfully disabled!",
+    });
+  } catch (error) {
+    console.error("MFA disable error: ", error);
+    res.status(500).json({
+      message: "Internal server error during MFA disable...",
     });
   }
 };

@@ -9,7 +9,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const AuthForm = ({ onAuthSuccess }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [loginForm, setLoginForm] = useState({ email: "", password: "" });
+  const [loginForm, setLoginForm] = useState({ email: "", password: "", mfaToken: "" });
   const [signupForm, setSignupForm] = useState({
     username: "",
     email: "",
@@ -21,6 +21,15 @@ const AuthForm = ({ onAuthSuccess }) => {
   const [messageType, setMessageType] = useState("");
   const [messageActive, setMessageActive] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // MFA states
+  const [mfaRequiredForLogin, setMfaRequiredForLogin] = useState(false); // To show MFA input during login
+  const [mfaSetupInitiated, setMfaSetupInitiated] = useState(false); // To show QR code/input for MFA setup
+  const [qrCodeURL , setqrCodeURL ] = useState("");
+  const [mfaSecret, setMfaSecret] = useState(""); // In case user needs to manually enter secret
+  const [currentAuthToken, setCurrentAuthToken] = useState(null); // Store token temporarily for MFA setup calls
+  const navigate = useNavigate(); // Hook for navigation 
+
 
   // Function to display messages
   const showMessage = (msg, type) => {
@@ -49,7 +58,7 @@ const AuthForm = ({ onAuthSuccess }) => {
 
   // Reset forms and messages when switching tabs
   useEffect(() => {
-    setLoginForm({ email: "", password: "" });
+    setLoginForm({ email: "", password: "", mfaToken: "" });
     setSignupForm({
       username: "",
       email: "",
@@ -61,6 +70,11 @@ const AuthForm = ({ onAuthSuccess }) => {
     setMessageType("");
     setMessageActive(false);
     setLoading(false); // Ensure loading is reset too
+    setMfaRequiredForLogin(false); // Reset MFA login state
+    setMfaSetupInitiated(false); // Reset MFA setup state
+    setqrCodeURL ("");
+    setMfaSecret("");
+    setCurrentAuthToken(null);
   }, [isLogin, showForgotPassword]);
 
   // Handle Login Submission
@@ -70,11 +84,17 @@ const AuthForm = ({ onAuthSuccess }) => {
     setMessage(""); // Clear previous messages
     setMessageType("");
 
-    const { email, password } = loginForm;
+    const { email, password, mfaToken } = loginForm;
 
     // Basic client-side validation
-    if (!email || !password) {
+    if (!mfaRequiredForLogin && !email || !password) {
       showMessage("Please fill in all fields.", "error");
+      setLoading(false);
+      return;
+    }
+
+    if (mfaRequiredForLogin && !mfaToken) {
+      showMessage("Please enter your MFA token.", "error");
       setLoading(false);
       return;
     }
@@ -85,22 +105,37 @@ const AuthForm = ({ onAuthSuccess }) => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, ...(mfaRequiredForLogin && { mfaToken })}),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        showMessage(data.message || "Login successful!", "success");
+        if (data.mfaRequired) {
+          // Backend signaled MFA is required
+          setMfaRequiredForLogin(true);
+          showMessage(data.message, "info");
+        }else{showMessage(data.message || "Login successful!", "success");
         console.log("Login successful:", data);
         setLoginForm({ email: "", password: "" }); // Clear form
 
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
         onAuthSuccess(data.token, data.user);
+        setMfaRequiredForLogin(false); // Reset MFA login state
+      }
+        
       } else {
         showMessage(data.message || "Login failed. Please try again.", "error");
         console.error("Login error:", data);
+        if (data.message && data.message.includes("MFA token")) {
+          // If the failure was specifically due to an invalid MFA token,
+          // keep the MFA input visible for another attempt.
+          setMfaRequiredForLogin(true);
+        } else {
+          // For other errors, reset the MFA requirement
+          setMfaRequiredForLogin(false);
+        }
       }
     } catch (error) {
       console.error("Network error during login:", error);
@@ -227,32 +262,207 @@ const AuthForm = ({ onAuthSuccess }) => {
     }
   };
 
+  // MFA initiate setup function
+
+  const handleInitiateMfaSetup = async () => {
+    setLoading(true);
+    setMessage("");
+    setMessageType("");
+    const token = localStorage.getItem("token"); // Get token from local storage
+
+    if (!token) {
+      showMessage("You need to be logged in to set up MFA.", "error");
+      setLoading(false);
+      navigate("/login"); // Redirect to login
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/mfa/setup-init`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setqrCodeURL (data.qrCodeURL);
+        setMfaSecret(data.secret);
+        setMfaSetupInitiated(true);
+        setCurrentAuthToken(token); // Store the token for the next step
+        showMessage(data.message, "info");
+      } else {
+        showMessage(data.message || "Failed to initiate MFA setup.", "error");
+      }
+    } catch (error) {
+      console.error("Network error during MFA setup initiation:", error);
+      showMessage("Network error. Please try again.", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handles MFA Complete setup logic function
+  const handleCompleteMfaSetup = async (mfaCode) => {
+    setLoading(true);
+    setMessage("");
+    setMessageType("");
+
+    if (!mfaCode) {
+      showMessage("Please enter the 6-digit code from your authenticator app.", "error");
+      setLoading(false);
+      return;
+    }
+
+    const token = currentAuthToken || localStorage.getItem("token"); // Use the token from initiation or fresh from storage
+
+    if (!token) {
+      showMessage("Authentication token missing. Please log in again.", "error");
+      setLoading(false);
+      navigate("/login");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/mfa/setup-complete`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ token: mfaCode }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showMessage(data.message || "MFA successfully enabled!", "success");
+        setMfaSetupInitiated(false); // Hide MFA setup UI
+        setqrCodeURL ("");
+        setMfaSecret("");
+        setCurrentAuthToken(null);
+
+        // Update user status in local storage/context after MFA enabled
+        const user = JSON.parse(localStorage.getItem("user"));
+        if (user) {
+          user.mfaEnabled = true;
+          localStorage.setItem("user", JSON.stringify(user));
+          onAuthSuccess(token, user); // Re-trigger onAuthSuccess to update context if needed
+        }
+      } else {
+        showMessage(data.message || "Failed to enable MFA. Invalid code.", "error");
+      }
+    } catch (error) {
+      console.error("Network error during MFA setup completion:", error);
+      showMessage("Network error. Please try again.", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handles MFA disable logic function
+  const handleDisableMfa = async () => {
+    setLoading(true);
+    setMessage("");
+    setMessageType("");
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      showMessage("You need to be logged in to disable MFA.", "error");
+      setLoading(false);
+      navigate("/login");
+      return;
+    }
+
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/mfa/disable`, {
+        method: "POST", // Using POST for state change, even if it's "disable"
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showMessage(data.message || "MFA successfully disabled.", "success");
+        // Update user status in local storage/context after MFA disabled
+        const user = JSON.parse(localStorage.getItem("user"));
+        if (user) {
+          user.mfaEnabled = false;
+          localStorage.setItem("user", JSON.stringify(user));
+          onAuthSuccess(token, user); // Re-trigger onAuthSuccess
+        }
+      } else {
+        showMessage(data.message || "Failed to disable MFA.", "error");
+      }
+    } catch (error) {
+      console.error("Network error during MFA disable:", error);
+      showMessage("Network error. Please try again.", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const [mfaCodeInput, setMfaCodeInput] = useState("");
+  const handleMfaCodeInputChange = (e) => {
+    setMfaCodeInput(e.target.value);
+  };
+ // Determine if MFA is enabled for the currently logged-in user
+  const loggedInUser = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")) : null;
+  const isMfaEnabledForLoggedInUser = loggedInUser && loggedInUser.mfaEnabled;
+
+
   return (
     <div className="container">
       <div className="form-toggle">
         <button
-          className={isLogin && !showForgotPassword ? "active" : ""}
+          className={isLogin && !showForgotPassword && !mfaSetupInitiated ? "active" : ""}
           onClick={() => {
             setIsLogin(true);
             setShowForgotPassword(false);
+            setMfaSetupInitiated(false);
+            setMfaRequiredForLogin(false);
           }}
           disabled={loading}
         >
           Login
         </button>
         <button
-          className={!isLogin && !showForgotPassword ? "active" : ""}
+          className={!isLogin && !showForgotPassword && !mfaSetupInitiated ? "active" : ""}
           onClick={() => {
             setIsLogin(false);
             setShowForgotPassword(false);
+            setMfaSetupInitiated(false);
+            setMfaRequiredForLogin(false);
           }}
           disabled={loading}
         >
           Signup
         </button>
+
+        {loggedInUser && ( // Only show MFA management if user is logged in
+          <button
+            className={mfaSetupInitiated ? "active" : ""}
+            onClick={() => {
+              setIsLogin(false); 
+              setShowForgotPassword(false);
+              setMfaSetupInitiated(true); // Show MFA setup/manage section
+              setMfaRequiredForLogin(false);
+            }}
+            disabled={loading}
+          >
+            Manage MFA
+          </button>
+        )}
         {showForgotPassword && (
           <button
-            className="active" // You might want a different style for this
+            className="active" 
             onClick={() => setShowForgotPassword(false)}
             disabled={loading}
           >
@@ -267,8 +477,70 @@ const AuthForm = ({ onAuthSuccess }) => {
         isActive={messageActive}
       />
 
-      {!showForgotPassword ? (
+      {mfaSetupInitiated && loggedInUser ? (
+        // MFA Setup / Management Section
+        <div id="mfa-management-form" className="form-section active">
+          <h2>Multi-Factor Authentication</h2>
+          {!isMfaEnabledForLoggedInUser ? (
+            <div>
+              {qrCodeURL  ? (
+                <>
+                  <p>Scan this QR code with your authenticator app (e.g., Google Authenticator, Authy).</p>
+                  <img src={qrCodeURL } alt="MFA QR Code" style={{ width: '200px', height: '200px', margin: '20px auto', display: 'block' }} />
+                  <p>Or manually enter the secret: <strong>{mfaSecret}</strong></p>
+                  <form onSubmit={(e) => { e.preventDefault(); handleCompleteMfaSetup(mfaCodeInput); }}>
+                    <InputGroup
+                      label="Enter Code from App"
+                      type="text"
+                      id="mfa-setup-code"
+                      name="mfaCode"
+                      value={mfaCodeInput}
+                      onChange={handleMfaCodeInputChange}
+                      required
+                      pattern="\d{6}" // Ensure 6 digits
+                      maxLength="6"
+                    />
+                    <button type="submit" disabled={loading}>
+                      {loading ? (
+                        <>
+                          <span className="loading-spinner"></span> Verifying...
+                        </>
+                      ) : (
+                        "Verify & Enable MFA"
+                      )}
+                    </button>
+                  </form>
+                </>
+              ) : (
+                <button onClick={handleInitiateMfaSetup} disabled={loading}>
+                  {loading ? (
+                    <>
+                      <span className="loading-spinner"></span> Generating...
+                    </>
+                  ) : (
+                    "Initiate MFA Setup"
+                  )}
+                </button>
+              )}
+            </div>
+          ) : (
+            <div>
+              <p>MFA is currently **enabled** for your account.</p>
+              <button onClick={handleDisableMfa} disabled={loading} style={{ backgroundColor: 'darkred' }}>
+                {loading ? (
+                  <>
+                    <span className="loading-spinner"></span> Disabling...
+                  </>
+                ) : (
+                  "Disable MFA"
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+      ) : !showForgotPassword ? (
         isLogin ? (
+          // Login Form
           <div id="login-form" className="form-section active">
             <h2>Login</h2>
             <form onSubmit={handleLoginSubmit}>
@@ -281,6 +553,7 @@ const AuthForm = ({ onAuthSuccess }) => {
                 onChange={handleLoginChange}
                 required
                 autoComplete="email"
+                disabled={mfaRequiredForLogin && !loading} // Disable email/pass if MFA is required
               />
               <InputGroup
                 label="Password"
@@ -291,24 +564,45 @@ const AuthForm = ({ onAuthSuccess }) => {
                 onChange={handleLoginChange}
                 required
                 autoComplete="current-password"
+                disabled={mfaRequiredForLogin && !loading} // Disable email/pass if MFA is required
               />
+              {mfaRequiredForLogin && ( // Conditionally render MFA token input
+                <InputGroup
+                  label="MFA Code"
+                  type="text"
+                  id="mfa-login-code"
+                  name="mfaToken"
+                  value={loginForm.mfaToken}
+                  onChange={handleLoginChange}
+                  required
+                  pattern="\d{6}" // Ensure 6 digits
+                  maxLength="6"
+                  autoComplete="one-time-code"
+                />
+              )}
               <button type="submit" disabled={loading}>
                 {loading ? (
                   <>
-                    <span className="loading-spinner"></span> Logging in...
+                    <span className="loading-spinner"></span>{" "}
+                    {mfaRequiredForLogin ? "Verifying MFA..." : "Logging in..."}
                   </>
+                ) : mfaRequiredForLogin ? (
+                  "Verify MFA & Login"
                 ) : (
                   "Login"
                 )}
               </button>
-              <div className="forgot-password-link">
-                <a href="#" onClick={() => setShowForgotPassword(true)}>
-                  Forgot Password?
-                </a>
-              </div>
+              {!mfaRequiredForLogin && ( // Hide forgot password link if MFA is pending
+                <div className="forgot-password-link">
+                  <a href="#" onClick={() => setShowForgotPassword(true)}>
+                    Forgot Password?
+                  </a>
+                </div>
+              )}
             </form>
           </div>
         ) : (
+          // Signup Form
           <div id="signup-form" className="form-section active">
             <h2>Signup</h2>
             <form onSubmit={handleSignupSubmit}>
@@ -365,6 +659,7 @@ const AuthForm = ({ onAuthSuccess }) => {
           </div>
         )
       ) : (
+        // Forgot Password Form
         <div id="forgot-password-form" className="form-section active">
           <h2>Forgot Password</h2>
           <p>Enter your email address to receive a password reset link.</p>
