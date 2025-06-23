@@ -15,12 +15,26 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import "./index.css";
 
+
+
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [currentUser, setCurrentUser] = useState(
-    localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")) : null
+    () => {
+    try {
+      const storedUser = localStorage.getItem("user");
+      return storedUser ? JSON.parse(storedUser) : null;
+    } catch (e) {
+      console.error("Failed to parse user data from localStorage", e);
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      return null;
+    }
+  }
   );
+  
+  
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -83,28 +97,31 @@ function App() {
       );
       navigate("/products", { replace: true });
     }
-  }, []); // Empty dependency array means this runs once on mount
+  }, [isAuthenticated, navigate]); // Empty dependency array means this runs once on mount
 
   // Additional useEffect for `isAuthenticated` changes, if any logic depends on it
   // This helps with initial rendering after login/logout
-  useEffect(() => {
-    // If the user logs out, make sure they are redirected if they are on a protected page
-    if (
-      !isAuthenticated &&
-      !window.location.pathname.startsWith("/login") &&
-      !window.location.pathname.startsWith("/signup") &&
-      !window.location.pathname.startsWith("/forgotpassword") &&
-      !window.location.pathname.startsWith("/resetpassword")
-    ) {
-      // navigate('/login', { replace: true });
-      // Removed this line as the initial useEffect and ProtectedRoute should handle
-      // leaving it here could cause unnecessary redirects/reloads
-    }
-  }, [isAuthenticated, navigate]);
+  // useEffect(() => {
+  //   // If the user logs out, make sure they are redirected if they are on a protected page
+  //   if (
+  //     !isAuthenticated &&
+  //     !window.location.pathname.startsWith("/login") &&
+  //     !window.location.pathname.startsWith("/signup") &&
+  //     !window.location.pathname.startsWith("/forgotpassword") &&
+  //     !window.location.pathname.startsWith("/resetpassword")
+  //   ) {
+  //     // navigate('/login', { replace: true });
+      
+  //   }
+  // }, [isAuthenticated, navigate]);
+
+  const handleUserUpdate = (updatedUser) => {
+    setCurrentUser(updatedUser);
+    localStorage.setItem("user", JSON.stringify(updatedUser)); // Keep localStorage in sync
+  };
 
   const handleAuthSuccess = (token, userData) => {
-    setIsAuthenticated(true);
-    setUser(userData);
+    
     localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(userData));
     navigate("/products"); // Direct navigation after successful login
@@ -233,17 +250,17 @@ function App() {
           element={<LoginPage onAuthSuccess={handleAuthSuccess} />}
         />
 
-        <Route path="/products" element={<AllProductsPage user={user} />} />
+        <Route path="/products" element={<AllProductsPage currentUser={currentUser} onUserUpdate={handleUserUpdate} user={user} />} />
         <Route
           path="/products/:id"
-          element={<ProductDetailPage user={user} />}
+          element={<ProductDetailPage user={currentUser} />}
         />
 
         <Route
           path="/add-product"
           element={
             <ProtectedRoute isAuthenticated={isAuthenticated}>
-              <AddProductPage user={user} onProductAdded={handleProductAdded} />
+              <AddProductPage user={currentUser} onProductAdded={handleProductAdded} />
             </ProtectedRoute>
           }
         />
@@ -252,7 +269,7 @@ function App() {
           path="/my-products"
           element={
             <ProtectedRoute isAuthenticated={isAuthenticated}>
-              <MyProductsPage user={user} />
+              <MyProductsPage user={currentUser} />
             </ProtectedRoute>
           }
         />
@@ -261,7 +278,7 @@ function App() {
           path="/edit-product/:id"
           element={
             <ProtectedRoute isAuthenticated={isAuthenticated}>
-              <EditProductPage user={user} />
+              <EditProductPage user={currentUser} />
             </ProtectedRoute>
           }
         />

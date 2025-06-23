@@ -10,7 +10,7 @@ const MfaSettings = ({ currentUser, onUserUpdate }) => {
   const [messageType, setMessageType] = useState("");
   const [messageActive, setMessageActive] = useState(false);
   const [mfaSetupInitiated, setMfaSetupInitiated] = useState(false);
-  const [mfaQrCodeUrl, setMfaQrCodeUrl] = useState("");
+  const [mfaqrCodeURL, setMfaqrCodeURL] = useState("");
   const [mfaSecret, setMfaSecret] = useState("");
   const [mfaSetupCode, setMfaSetupCode] = useState(""); // For entering MFA code during setup
 
@@ -55,7 +55,7 @@ const MfaSettings = ({ currentUser, onUserUpdate }) => {
       const data = await response.json();
 
       if (response.ok) {
-        setMfaQrCodeUrl(data.qrCodeUrl);
+        setMfaqrCodeURL(data.qrCodeURL);
         setMfaSecret(data.secret);
         setMfaSetupInitiated(true);
         showMessage(data.message, "info");
@@ -70,7 +70,7 @@ const MfaSettings = ({ currentUser, onUserUpdate }) => {
     }
   };
 
-  // Complete MFA Setup (verify code and enable)
+  //  MFA Setup (verify code and enable)
   const handleCompleteMfaSetup = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -104,7 +104,7 @@ const MfaSettings = ({ currentUser, onUserUpdate }) => {
       if (response.ok) {
         showMessage(data.message || "MFA successfully enabled!", "success");
         setMfaSetupInitiated(false); // Hide MFA setup UI
-        setMfaQrCodeUrl("");
+        setMfaqrCodeURL("");
         setMfaSecret("");
         setMfaSetupCode(""); // Clear code
         // Update user status in local storage/context
@@ -154,7 +154,7 @@ const MfaSettings = ({ currentUser, onUserUpdate }) => {
         // Update user status in local storage/context
         const updatedUser = { ...currentUser, mfaEnabled: false };
         localStorage.setItem("user", JSON.stringify(updatedUser));
-        onUserUpdate(updatedUser); // Notify parent (App.jsx or Products.jsx)
+        onUserUpdate(updatedUser); 
       } else {
         showMessage(data.message || "Failed to disable MFA.", "error");
       }
@@ -201,10 +201,10 @@ const MfaSettings = ({ currentUser, onUserUpdate }) => {
             </button>
           ) : (
             <>
-              {mfaQrCodeUrl && (
+              {mfaqrCodeURL && (
                 <>
                   <p>Scan this QR code with your authenticator app (e.g., Google Authenticator, Authy).</p>
-                  <img src={mfaQrCodeUrl} alt="MFA QR Code" style={{ width: '200px', height: '200px', margin: '20px auto', display: 'block' }} />
+                  <img src={mfaqrCodeURL} alt="MFA QR Code" style={{ width: '200px', height: '200px', margin: '20px auto', display: 'block' }} />
                   <p>Or manually enter the secret: <strong>{mfaSecret}</strong></p>
                   <form onSubmit={handleCompleteMfaSetup}>
                     <InputGroup
