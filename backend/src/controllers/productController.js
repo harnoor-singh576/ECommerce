@@ -3,9 +3,18 @@ const mongoose = require("mongoose");
 const fs = require("fs");
 const path = require("path");
 
+const getImageURL = (imagePath,req) =>{
+  if(!imagePath){
+    return null;
+  }
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  return `${baseUrl}/${imagePath.replace(/\\/g, '/')}`;
+}
+
 exports.addProduct = async (req, res) => {
-  const { name, price, description, image } = req.body;
+  const { name, price, description } = req.body;
   const imagePath = req.file ? req.file.path : null;
+
   if (!name || !price || !description || !imagePath) {
     if (imagePath) {
       fs.unlink(imagePath, (error) => {
@@ -28,10 +37,15 @@ exports.addProduct = async (req, res) => {
       user: req.user.id,
     });
     const createdProduct = await product.save();
+
+    const productWithImageURL = {
+      ...createdProduct._doc, // Use _doc to get plain JavaScript object
+      image: getImageUrl(createdProduct.image, req),
+    }
     res.status(201).json({
       success: true,
       message: "Product added successfully",
-      product: createdProduct,
+      product: productWithImageURL,
     });
   } catch (error) {
     console.error("Error while adding product:", error);
@@ -52,9 +66,13 @@ exports.addProduct = async (req, res) => {
 exports.getProducts = async (req, res) => {
   try {
     const products = await Product.find().populate("user", "username email");
+    const productsWithImageURLs = products.map(product => ({
+            ...product._doc,
+            image: getImageURL(product.image, req)
+        }));
     res.status(200).json({
       message: "Products fetched successfully",
-      products,
+      products: productsWithImageURLs,
     });
   } catch (error) {
     console.error("Error fetching products: ", error);
@@ -69,9 +87,13 @@ exports.getMyProducts = async (req, res) => {
     const products = await Product.find({
       user: req.user.id,
     }).populate('user', 'username email');
+    const productsWithImageURLs = products.map(product => ({
+            ...product._doc,
+            image: getImageURL(product.image, req)
+        }));
     res.status(200).json({
       message: "My products fetched successfully",
-      products,
+      products: productsWithImageURLs,
     });
   } catch (error) {
     console.error("Error while fetching products:", error);
@@ -97,9 +119,13 @@ exports.getProductById = async (req, res) => {
         message: "Product not found",
       });
     }
+    const productWithImageURL = {
+            ...product._doc,
+            image: getImageURL(product.image, req),
+        };
     res.status(200).json({
       message: "Product fetched successfully",
-      product,
+      product: productWithImageURL,
     });
   } catch (error) {
     console.error("Error fetching product by its ID:");
@@ -112,7 +138,7 @@ exports.getProductById = async (req, res) => {
 //  Update product by id controller function
 exports.updateProduct = async (req, res) => {
   const { id } = req.params;
-  const { name, price, description, image } = req.body;
+  const { name, price, description } = req.body;
   const newImagePath = req.file ? req.file.path : null;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -135,7 +161,7 @@ exports.updateProduct = async (req, res) => {
         fs.unlink(newImagePath, (err) => {
           if (err)
             console.error(
-              "Error deleting new uploaded file for non-existent product:",
+              "Error while deleting new uploaded file for non-existent product:",
               err
             );
         });
@@ -188,9 +214,13 @@ exports.updateProduct = async (req, res) => {
     }
 
     const updatedProduct = await product.save();
+    const productWithImageURL = {
+            ...updatedProduct._doc,
+            image: getImageURL(updatedProduct.image, req),
+        };
     res.status(200).json({
       message: "Product updated successfully",
-      product: updatedProduct,
+      product: productWithImageURL,
     });
   } catch (error) {
     console.error("Error updating product: ", error);

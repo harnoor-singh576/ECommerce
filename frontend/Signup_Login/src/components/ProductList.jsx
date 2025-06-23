@@ -157,11 +157,19 @@ const ProductList = ({ user, showMyProductsOnly = false }) => {
 
             return (
               <div key={product._id} className="product-card">
-                <img
-                  src={`${API_BASE_URL}/${product.image.replace(/\\/g, "/")}`}
-                  alt={product.name}
-                  className="product-image"
-                />
+                {product.image && (
+                        <img
+                            src={product.image}
+                            alt={product.name}
+                            // Inline styles for demonstration, ideally use a CSS class
+                            style={{
+                                maxWidth: '100%', // Ensures image doesn't overflow its container
+                                height: 'auto',   // Maintains aspect ratio
+                                display: 'block', // Removes extra space below image
+                                objectFit: 'cover' // Crops image to fill its box without distorting
+                            }}
+                        />
+                    )}
                 <h3>{product.name}</h3>
                 <p className="product-price">₹{product.price.toFixed(2)}</p>
                 <p className="product-description">{product.description}</p>
