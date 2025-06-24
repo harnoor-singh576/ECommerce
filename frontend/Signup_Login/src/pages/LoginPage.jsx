@@ -2,8 +2,8 @@
 import React from "react";
 import AuthForm from "../components/AuthForm";
 
-const LoginPage = ({ onAuthSuccess }) => {
-  return <AuthForm onAuthSuccess={onAuthSuccess} />;
+const LoginPage = () => {
+  return <AuthForm />;
 };
 
 export default LoginPage;

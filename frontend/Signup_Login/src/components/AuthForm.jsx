@@ -2,11 +2,12 @@ import React, { useState, useEffect } from "react";
 import InputGroup from "./InputGroup";
 import MessageDisplay from "./MessageDisplay";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 //  access environment variables
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-const AuthForm = ({ onAuthSuccess }) => {
+const AuthForm = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [loginForm, setLoginForm] = useState({ email: "", password: "", mfaToken: "" });
@@ -29,6 +30,7 @@ const AuthForm = ({ onAuthSuccess }) => {
   const [mfaSecret, setMfaSecret] = useState(""); // In case user needs to manually enter secret
   const [currentAuthToken, setCurrentAuthToken] = useState(null); // Store token temporarily for MFA setup calls
   const navigate = useNavigate(); // Hook for navigation 
+  const { user: loggedInUser, updateAuth } = useAuth();
 
 
   // Function to display messages
@@ -69,9 +71,9 @@ const AuthForm = ({ onAuthSuccess }) => {
     setMessage("");
     setMessageType("");
     setMessageActive(false);
-    setLoading(false); // Ensure loading is reset too
-    setMfaRequiredForLogin(false); // Reset MFA login state
-    setMfaSetupInitiated(false); // Reset MFA setup state
+    setLoading(false); 
+    setMfaRequiredForLogin(false); 
+    setMfaSetupInitiated(false); 
     setqrCodeURL ("");
     setMfaSecret("");
     setCurrentAuthToken(null);
@@ -87,7 +89,7 @@ const AuthForm = ({ onAuthSuccess }) => {
     const { email, password, mfaToken } = loginForm;
 
     // Basic client-side validation
-    if (!mfaRequiredForLogin && !email || !password) {
+    if (!mfaRequiredForLogin && (!email || !password)) {
       showMessage("Please fill in all fields.", "error");
       setLoading(false);
       return;
@@ -111,32 +113,29 @@ const AuthForm = ({ onAuthSuccess }) => {
       const data = await response.json();
 
       if (response.ok) {
-        if (data.mfaRequired) {
-          // Backend signaled MFA is required
+        if (data.message && data.message.includes("MFA is enabled")) {
           setMfaRequiredForLogin(true);
           showMessage(data.message, "info");
-        }else{showMessage(data.message || "Login successful!", "success");
-        console.log("Login successful:", data);
-        setLoginForm({ email: "", password: "" }); // Clear form
+        } else {
+          showMessage(data.message || "Login successful!", "success");
+          console.log("Login successful:", data);
+          setLoginForm({ email: "", password: "", mfaToken: "" }); // Clear form
 
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
-        onAuthSuccess(data.token, data.user);
-        setMfaRequiredForLogin(false); // Reset MFA login state
-      }
-        
+          // Update AuthContext and localStorage
+          updateAuth(data.token, data.user); // Use updateAuth from context
+          setMfaRequiredForLogin(false); // Reset MFA login state
+          navigate("/products"); // Navigate on successful login
+        }
       } else {
         showMessage(data.message || "Login failed. Please try again.", "error");
         console.error("Login error:", data);
-        if (data.message && data.message.includes("MFA token")) {
-          // If the failure was specifically due to an invalid MFA token,
-          // keep the MFA input visible for another attempt.
+        if (data.message && data.message.includes("MFA is enabled. Please provide an MFA token.")) {
           setMfaRequiredForLogin(true);
         } else {
-          // For other errors, reset the MFA requirement
           setMfaRequiredForLogin(false);
         }
-      }
+        
+      } 
     } catch (error) {
       console.error("Network error during login:", error);
       showMessage(
@@ -188,7 +187,7 @@ const AuthForm = ({ onAuthSuccess }) => {
       const data = await response.json();
 
       if (response.ok) {
-        showMessage(data.message || "Signup successful!", "success");
+        showMessage(data.message || "Signup successful! You can login now.", "success");
         console.log("Signup successful:", data);
         setSignupForm({
           username: "",
@@ -391,12 +390,10 @@ const AuthForm = ({ onAuthSuccess }) => {
 
       if (response.ok) {
         showMessage(data.message || "MFA successfully disabled.", "success");
-        // Update user status in local storage/context after MFA disabled
-        const user = JSON.parse(localStorage.getItem("user"));
-        if (user) {
-          user.mfaEnabled = false;
-          localStorage.setItem("user", JSON.stringify(user));
-          onAuthSuccess(token, user); // Re-trigger onAuthSuccess
+        // Update user status in AuthContext and local storage after MFA disabled
+        if (loggedInUser) {
+          const updatedUser = { ...loggedInUser, mfaEnabled: false, mfaSecret: null };
+          updateAuth(token, updatedUser);
         }
       } else {
         showMessage(data.message || "Failed to disable MFA.", "error");
@@ -414,7 +411,7 @@ const AuthForm = ({ onAuthSuccess }) => {
     setMfaCodeInput(e.target.value);
   };
  // Determine if MFA is enabled for the currently logged-in user
-  const loggedInUser = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")) : null;
+ 
   const isMfaEnabledForLoggedInUser = loggedInUser && loggedInUser.mfaEnabled;
 
 

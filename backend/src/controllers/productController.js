@@ -40,7 +40,7 @@ exports.addProduct = async (req, res) => {
 
     const productWithImageURL = {
       ...createdProduct._doc, // Use _doc to get plain JavaScript object
-      image: getImageUrl(createdProduct.image, req),
+      image: getImageURL(createdProduct.image, req),
     }
     res.status(201).json({
       success: true,

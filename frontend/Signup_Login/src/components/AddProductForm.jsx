@@ -1,17 +1,21 @@
 import React, { useState } from "react";
 import InputGroup from "./InputGroup";
 import MessageDisplay from "./MessageDisplay";
+import { useAuth } from "../contexts/AuthContext"; 
+import { useNavigate } from "react-router-dom";
 import "../index.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-const AddProductForm = ({ user, onProductAdded }) => {
-  // Accepts user info and a callback for when a product is added
+const AddProductForm = ({ onProductAdded }) => {
+  const { user, token } = useAuth(); // Get user and token from AuthContext
+  const navigate = useNavigate();
+  
   const [productForm, setProductForm] = useState({
     name: "",
     price: "",
     description: "",
-    image: "",
+    image: null,
   });
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
@@ -46,11 +50,16 @@ const AddProductForm = ({ user, onProductAdded }) => {
     const { name, price, description, image } = productForm;
 
     // Client-side validation
-    if (!name || !price || !description || !image) {
+    if (!name || !price || !description) {
       showMessage(
         "Please fill in all required fields and select an image.",
         "error"
       );
+      setLoading(false);
+      return;
+    }
+    if (!image) { 
+      showMessage("Please select an image.", "error");
       setLoading(false);
       return;
     }
@@ -73,9 +82,10 @@ const AddProductForm = ({ user, onProductAdded }) => {
 
     const token = localStorage.getItem("token"); // Get the token from localStorage
 
-    if (!token) {
-      showMessage("You must be logged in to add a product.", "error");
+    if (!user || !token) {
+      showMessage("Authentication token missing. Please log in again.", "error");
       setLoading(false);
+      navigate("/login"); // Redirect to login if token is missing
       return;
     }
 
@@ -89,7 +99,7 @@ const AddProductForm = ({ user, onProductAdded }) => {
       const response = await fetch(`${API_BASE_URL}/products`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          
           Authorization: `Bearer ${token}`, // *** IMPORTANT: Send the JWT token ***
         },
         body: formData,
@@ -99,7 +109,9 @@ const AddProductForm = ({ user, onProductAdded }) => {
 
       if (response.ok) {
         showMessage(data.message || "Product added successfully!", "success");
-        setProductForm({ name: "", price: "", description: "", image: null }); // Clear form
+        setProductForm({ name: "", price: "", description: "", image: null });
+        const fileInput = document.getElementById('product-image');
+if (fileInput) {fileInput.value = '';}
         console.log("Product added:", data.product);
         if (onProductAdded) {
           onProductAdded(data.product); // Notify parent (App.jsx) if needed
@@ -126,9 +138,9 @@ const AddProductForm = ({ user, onProductAdded }) => {
     <div className="container">
       <h2>Add New Product</h2>
       {user ? (
-        <p>Logged in as: {user.username || user.email}</p>
+        <p>Logged in as: <strong>{user.username || user.email}</strong></p>
       ) : (
-        <p>Please log in to add products.</p>
+        <p>You must be logged in to add products</p>
       )}
 
       <form onSubmit={handleSubmit}>
@@ -145,6 +157,7 @@ const AddProductForm = ({ user, onProductAdded }) => {
           onChange={handleChange}
           required
           placeholder="e.g., Laptop, Smartphone"
+          disabled={loading}
         />
         <InputGroup
           label={
@@ -159,6 +172,7 @@ const AddProductForm = ({ user, onProductAdded }) => {
           onChange={handleChange}
           required
           placeholder="e.g., 999.99"
+          disabled={loading}
         />
         <InputGroup
           label={
@@ -166,24 +180,30 @@ const AddProductForm = ({ user, onProductAdded }) => {
               Description <span className="required-star">*</span>
             </>
           }
-          type="text" // Could be 'textarea' but for simplicity, using 'text' here
+          type="text" 
           id="product-description"
           name="description"
           value={productForm.description}
           onChange={handleChange}
           required
           placeholder="A brief description of the product."
+          disabled={loading}
         />
         <InputGroup
           label="Choose image"
           type="file"
           id="product-image"
           name="image"
-          value={productForm.image}
+          
           onChange={handleChange}
           accept="image/*" // Accept only image files
           required
+          disabled={loading}         
+
         />
+        {productForm.image && (
+  <p>Selected file: {productForm.image.name}</p>
+)}
 
         <button type="submit" disabled={loading || !user}>
           {" "}

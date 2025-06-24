@@ -2,8 +2,10 @@
 import React from "react";
 import ProductList from "../components/ProductList";
 import MfaSettings from "../components/MfaSettings";
+import { useAuth } from "../contexts/AuthContext";
 
-const AllProductsPage = ({ currentUser, onUserUpdate }) => {
+const AllProductsPage = () => {
+  const { user: currentUser } = useAuth();
   return (
     <div className="container">
       <h1>Products</h1>
@@ -11,20 +13,21 @@ const AllProductsPage = ({ currentUser, onUserUpdate }) => {
       {currentUser && (
         <p>
           Welcome,{" "}
-          <strong>{currentUser.username || currentUser.email || "User"}</strong>!
+          <strong>{currentUser.username || currentUser.email || "User"}</strong>
+          !
         </p>
       )}
 
       {/* Render the MFA Settings component */}
       {currentUser && ( // Only show MFA settings if a user is logged in
-        <MfaSettings currentUser={currentUser} onUserUpdate={onUserUpdate} />
+        <MfaSettings />
       )}
 
       {/* Horizontal line for separation */}
       <hr style={{ margin: "30px 0", borderColor: "#eee" }} />
 
       {/* Your existing ProductList component */}
-      <ProductList user={currentUser} showMyProductsOnly={false} />
+      <ProductList showMyProductsOnly={false} />
     </div>
   );
 };

@@ -35,6 +35,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null, // will store the base32 encoded secret
   },
+  profilePicture: {
+    type: String,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now,

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+// src/App.jsx
+import React, { useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -6,9 +7,12 @@ import {
   Link,
   useNavigate,
   useLocation,
-} from "react-router-dom"; // Import useLocation
+  Navigate,
+} from "react-router-dom";
 
-import LoginPage from "./pages/LoginPage";
+
+import LoginPage from "./pages/LoginPage"; // Still using LoginPage, which renders AuthForm
+import ProtectedPage from "./pages/ProtectedPage";
 import AllProductsPage from "./pages/AllProductsPage";
 import MyProductsPage from "./pages/MyProductsPage";
 import AddProductPage from "./pages/AddProductPage";
@@ -17,55 +21,43 @@ import EditProductPage from "./pages/EditProductPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 
-import ProtectedRoute from "./components/ProtectedRoute";
+// Removed ProtectedRoute import as PrivateRoute from useAuth context replaces it
+import ProfilePage from "./pages/ProfilePage";
+import AuthForm from "./components/AuthForm"; // AuthForm handles login/signup and updates context directly
+import { useAuth } from "./contexts/AuthContext"; // Centralized authentication state
 import "./index.css";
 
-function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState(null);
-  const [currentUser, setCurrentUser] = useState(() => {
-    try {
-      const storedUser = localStorage.getItem("user");
-      return storedUser ? JSON.parse(storedUser) : null;
-    } catch (e) {
-      console.error("Failed to parse user data from localStorage", e);
-      localStorage.removeItem("user");
-      localStorage.removeItem("token");
-      return null;
-    }
-  });
+// Component to protect routes.
+const PrivateRoute = ({ children }) => {
+  const { user, loading } = useAuth(); // Get auth state from context
 
+  if (loading) {
+    // Show a loading indicator while authentication status is being determined
+    return <div className="full-page-loader">Loading application...</div>;
+  }
+
+  // If user is null (not authenticated), redirect to login page
+  return user ? children : <Navigate to="/login" replace />;
+};
+
+function App() {
+  const { user, logout, loading } = useAuth(); // Consume auth state from context
   const navigate = useNavigate();
-  const location = useLocation(); // Get current location object
+  const location = useLocation();
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const storedUser = localStorage.getItem("user");
-
-    if (token && storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        setIsAuthenticated(true);
-      } catch (e) {
-        console.error("Failed to parse user data from localStorage", e);
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        setIsAuthenticated(false);
-        setUser(null);
-      }
-    } else {
-      setIsAuthenticated(false);
-      setUser(null);
+    // This effect handles global redirection based on authentication state
+    // and current path. It runs after the AuthContext has finished loading.
+    if (loading) {
+      return; // Do nothing while auth context is still loading
     }
 
-    // --- Initial Redirect Logic ---
-    const currentPath = location.pathname; // Use location.pathname
+    const currentPath = location.pathname;
     const PUBLIC_PATHS = [
       "/login",
       "/signup",
       "/forgotpassword",
-      "/resetPassword", // Simplified, as the route uses :token
+      "/resetPassword", // Matches '/resetPassword/:token'
     ];
 
     // Check if the current path is one of the public authentication paths
@@ -74,28 +66,26 @@ function App() {
     );
 
     // Specifically handle the reset password page for unauthenticated users
-    if (currentPath.startsWith("/resetPassword/") && !isAuthenticated) {
-      // Allow access to the reset password page if there's a token in the URL
-      // and the user is not authenticated. Do not redirect.
+    // This part was problematic; now correctly checks for `!user`
+    if (currentPath.startsWith("/resetPassword/") && !user) {
       console.log(
         "App Init: Allowing access to resetpassword page for unauthenticated user."
       );
-      return;
+      return; // Do not redirect if on a reset password path and not logged in
     }
 
-    if (!isAuthenticated) {
-      // If not authenticated:
-      // If trying to access a protected path, redirect to login
+    // If user is NOT authenticated
+    if (!user) {
+      // If trying to access a protected path (not an auth path), redirect to login
       if (!isAuthPath) {
         console.log(
           "App Init: Not authenticated on protected path, redirecting to /login"
         );
         navigate("/login", { replace: true });
       }
-      // If on an auth path (login, signup, forgotpassword, or resetpassword with a token),
-      // just stay there. No redirection needed.
+      // If on an auth path (login, signup, forgotpassword, or resetpassword), stay there.
     } else {
-      // If authenticated:
+      // If user IS authenticated
       // If on a public authentication path (like /login, /signup, /forgotpassword)
       // or the root path "/", redirect to /products.
       if (isAuthPath || currentPath === "/") {
@@ -106,28 +96,7 @@ function App() {
       }
       // If authenticated and on a protected product-related page, stay there.
     }
-  }, [isAuthenticated, navigate, location.pathname]); // Add location.pathname to dependencies
-
-  const handleUserUpdate = (updatedUser) => {
-    setCurrentUser(updatedUser);
-    localStorage.setItem("user", JSON.stringify(updatedUser));
-  };
-
-  const handleAuthSuccess = (token, userData) => {
-    localStorage.setItem("token", token);
-    localStorage.setItem("user", JSON.stringify(userData));
-    setIsAuthenticated(true); // Update state here so useEffect reacts
-    setUser(userData); // Update user state
-    navigate("/products");
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    setIsAuthenticated(false);
-    setUser(null);
-    navigate("/login");
-  };
+  }, [user, loading, navigate, location.pathname]); // Dependencies: react to user, loading, and path changes
 
   const handleProductAdded = (newProduct) => {
     console.log("Product added successfully in App:", newProduct);
@@ -136,11 +105,11 @@ function App() {
 
   return (
     <div className="App">
-      {isAuthenticated && (
+      {/* Show navigation and logout button ONLY if user is authenticated */}
+      {user && (
         <>
-          {/* Logout button and navigation menu */}
           <button
-            onClick={handleLogout}
+            onClick={logout} // Use logout from useAuth context
             style={{
               position: "absolute",
               top: "20px",
@@ -189,7 +158,8 @@ function App() {
                   All Products
                 </Link>
               </li>
-              {isAuthenticated && (
+              {/* Navigation links now correctly check for `user` from context */}
+              {user && (
                 <li>
                   <Link
                     to="/my-products"
@@ -206,7 +176,7 @@ function App() {
                   </Link>
                 </li>
               )}
-              {isAuthenticated && (
+              {user && (
                 <li>
                   <Link
                     to="/add-product"
@@ -223,6 +193,23 @@ function App() {
                   </Link>
                 </li>
               )}
+              {user && (
+                <li>
+                  <Link
+                    to="/profile"
+                    style={{
+                      color: "black",
+                      textDecoration: "none",
+                      background: "lightgrey",
+                      borderRadius: "5px",
+                      padding: "10px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Profile
+                  </Link>
+                </li>
+              )}
             </ul>
           </nav>
         </>
@@ -230,64 +217,71 @@ function App() {
       <Routes>
         <Route path="/forgotpassword" element={<ForgotPasswordPage />} />
         <Route path="/resetPassword/:token" element={<ResetPasswordPage />} />
-        <Route
-          path="/login"
-          element={<LoginPage onAuthSuccess={handleAuthSuccess} />}
-        />
-        <Route
-          path="/signup"
-          element={<LoginPage onAuthSuccess={handleAuthSuccess} />}
-        />
+        <Route path="/login" element={<AuthForm />} />
+        <Route path="/signup" element={<AuthForm />} />
         <Route
           path="/"
-          element={<LoginPage onAuthSuccess={handleAuthSuccess} />}
+          element={user ? <Navigate to="/products" replace /> : <AuthForm />}
         />
 
+        {/* Protected Routes using the PrivateRoute component */}
+        <Route
+          path="/protected"
+          element={
+            <PrivateRoute>
+              <ProtectedPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <PrivateRoute>
+              <ProfilePage />
+            </PrivateRoute>
+          }
+        />
         <Route
           path="/products"
           element={
-            <AllProductsPage
-              currentUser={currentUser}
-              onUserUpdate={handleUserUpdate}
-              user={user}
-            />
+            <PrivateRoute>
+              <AllProductsPage />
+            </PrivateRoute>
           }
         />
         <Route
           path="/products/:id"
-          element={<ProductDetailPage user={currentUser} />}
+          element={
+            <PrivateRoute>
+              <ProductDetailPage />
+            </PrivateRoute>
+          }
         />
-
         <Route
           path="/add-product"
           element={
-            <ProtectedRoute isAuthenticated={isAuthenticated}>
-              <AddProductPage
-                user={currentUser}
-                onProductAdded={handleProductAdded}
-              />
-            </ProtectedRoute>
+            <PrivateRoute>
+              <AddProductPage onProductAdded={handleProductAdded} />
+            </PrivateRoute>
           }
         />
-
         <Route
           path="/my-products"
           element={
-            <ProtectedRoute isAuthenticated={isAuthenticated}>
-              <MyProductsPage user={currentUser} />
-            </ProtectedRoute>
+            <PrivateRoute>
+              <MyProductsPage />
+            </PrivateRoute>
           }
         />
-
         <Route
           path="/edit-product/:id"
           element={
-            <ProtectedRoute isAuthenticated={isAuthenticated}>
-              <EditProductPage user={currentUser} />
-            </ProtectedRoute>
+            <PrivateRoute>
+              <EditProductPage />
+            </PrivateRoute>
           }
         />
-        <Route path="*" element={<div>404 Not Found</div>} />
+        <Route path="*" element={<div>404 Page Not Found</div>} />
       </Routes>
     </div>
   );

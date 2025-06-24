@@ -1,18 +1,20 @@
 // src/components/ProductList.jsx
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import MessageDisplay from "./MessageDisplay"; // Assuming you have this
+import MessageDisplay from "./MessageDisplay";
+import { useAuth } from "../contexts/AuthContext"; // Assuming you have this
 import "../index.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-const ProductList = ({ user, showMyProductsOnly = false }) => {
+const ProductList = ({ showMyProductsOnly = false }) => {
+  const { user } = useAuth();
   const [products, setProducts] = useState([]);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
   const [messageActive, setMessageActive] = useState(false);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  
 
   const showMessage = (msg, type) => {
     setMessage(msg);
@@ -107,9 +109,16 @@ const ProductList = ({ user, showMyProductsOnly = false }) => {
     }
   };
 
+
   if (loading) {
     return <div className="container">Loading Products...</div>;
   }
+
+  const getImageURL = (imagePath) => {
+  if (!imagePath) return null;
+  if (imagePath.startsWith('http')) return imagePath;
+  return `${API_BASE_URL}/uploads/${imagePath}`;
+};
 
   return (
     <div className="container product-list-container">
@@ -128,48 +137,36 @@ const ProductList = ({ user, showMyProductsOnly = false }) => {
       ) : (
         <div className="product-grid">
           {products.map((product) => {
-            let productOwnerId = null;
-            if (product.user) {
-              if (typeof product.user === "object" && product.user !== null) {
-                productOwnerId = product.user._id;
-              } else if (typeof product.user === "string") {
-                productOwnerId = product.user;
-              }
-            }
+            const productOwnerId =
+              (typeof product.user === "object" && product.user?._id) ||
+              (typeof product.user === "string" && product.user) ||
+              null;
+              const currentUserId = user?.id;
+              const canEdit =
+              user && productOwnerId && String(currentUserId) === String(productOwnerId);
+                      
+           
 
-            const currentUserId = user?.id;
-            const isOwner =
-              currentUserId &&
-              productOwnerId &&
-              currentUserId === productOwnerId;
-
-            if (!product.user) {
-              // This is your original warning check, keep it if you want to be alerted of backend issues
+            // Log only in development to avoid console clutter
+            if (!product.user && process.env.NODE_ENV === "development") {
               console.warn(
-                "Product.user is null or undefined for product:",
-                product.name,
-                product._id
+                `Product.user is null or undefined for product: ${product.name} (ID: ${product._id})`
               );
             }
-            {
-              console.log("--- End ID Comparison Debug ---");
-            }
+            
 
             return (
               <div key={product._id} className="product-card">
                 {product.image && (
-                        <img
-                            src={product.image}
-                            alt={product.name}
-                            // Inline styles for demonstration, ideally use a CSS class
-                            style={{
-                                maxWidth: '100%', // Ensures image doesn't overflow its container
-                                height: 'auto',   // Maintains aspect ratio
-                                display: 'block', // Removes extra space below image
-                                objectFit: 'cover' // Crops image to fill its box without distorting
-                            }}
-                        />
-                    )}
+                  <div className="image-container">
+                  <img
+                    src={getImageURL(product.image)}
+                    alt={product.name}
+                    // Inline styles for demonstration, ideally use a CSS class
+                    className="product-image"
+                  />
+                  </div>
+                )}
                 <h3>{product.name}</h3>
                 <p className="product-price">₹{product.price.toFixed(2)}</p>
                 <p className="product-description">{product.description}</p>
@@ -180,7 +177,7 @@ const ProductList = ({ user, showMyProductsOnly = false }) => {
                     : "Unknown"}
                 </small>
 
-                {isOwner && (
+                {canEdit && (
                   <div className="product-actions">
                     {console.log(
                       `Rendering buttons for product: ${product.name} (ID: ${product._id})`

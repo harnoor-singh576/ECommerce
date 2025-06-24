@@ -358,3 +358,66 @@ exports.resetToken = async (req, res) => {
     });
   }
 };
+
+
+// Update user profile logic
+exports.updateProfile = async (req,res) => {
+  try {
+    const userId = req.user.id;
+    const {username, email}  = req.body;
+    let profilePicturePath = req.file ? req.file.path : null; //Path of the uploaded file
+
+    const user = await User.findById(userId);
+    if(!user){
+      return res.status(404).json({
+        message: "User not found..."
+      })
+    }
+
+    // Update username if provided and changed
+    if(username && username !== user.username){
+      const existingUsername = await User.findOne({username});
+      if(existingUsername && existingUsername._id.toString() !== userId){
+        return res.status(400).json({
+          message: "Username already taken. Please try a different one!"
+        })
+      }
+
+      user.username = username;
+    }
+
+    // Update email if provided and changed
+    if(email && email !== user.email){
+      const existingEmail = await User.findOne({email});
+      if(existingEmail && existingEmail._id.toString() !==userId){
+        return res.status(400).json({
+          message: "Email already exists. Please try a different one!"
+        })
+      }
+      user.email = email;
+    }
+
+    // Update profile picture if a new one is uploaded
+    if(profilePicturePath){
+      user.profilePicture = profilePicturePath.replace(/\\/g, '/');
+    }
+
+    await user.save();
+    res.status(200).json({
+      message: "Profile updated successfully",
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        mfaEnabled: user.mfaEnabled,
+        profilePicture: user.profilePicture
+      }
+    });
+  } catch (error) {
+    console.error("Update profile error: ", error);
+    res.status(500).json({
+      message: "Internal server error during update profile...."
+    })
+    
+  }
+}

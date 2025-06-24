@@ -2,6 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const cors = require("cors");
+const path = require('path')
 
 dotenv.config();
 
@@ -19,7 +20,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-app.use('/uploads', express.static('uploads'))
+app.use("/uploads", express.static(path.join(__dirname, 'public/uploads')))
 
 // Database connection
 mongoose

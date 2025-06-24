@@ -12,6 +12,7 @@ const InputGroup = ({
   autoComplete,
   placeholder,
   error,
+  disabled, accept
 }) => {
   const [showPassword, setShowPassword] = useState(false);
   const togglePasswordVisibility = () => {
@@ -33,6 +34,8 @@ const InputGroup = ({
           autoComplete={autoComplete}
           placeholder={placeholder}
           className={error ? "input-error" : ""}
+          disabled={disabled}
+        accept={accept}
         />
         {type === "password" && (
           <span
