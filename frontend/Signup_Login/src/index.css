@@ -343,7 +343,7 @@ button:disabled {
 
 .edit-button,
 .delete-button,
-.add-button {
+.add-button, .view-button {
   padding: 8px 12px;
   border: none;
   border-radius: 5px;
@@ -355,7 +355,10 @@ button:disabled {
   align-items: center;
   justify-content: center;
 }
-
+.view-button{
+  background-color: #4CAF50;
+  color: white;
+}
 .edit-button {
   background-color: #007bff;
   color: white;

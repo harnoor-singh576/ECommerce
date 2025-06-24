@@ -3,17 +3,19 @@ const mongoose = require("mongoose");
 const fs = require("fs");
 const path = require("path");
 
+
 const getImageURL = (imagePath,req) =>{
   if(!imagePath){
     return null;
   }
   const baseUrl = `${req.protocol}://${req.get('host')}`;
+  const normalizedPath = imagePath.replace(/^uploads[\\/]/, "").replace(/\\/g, "/");
   return `${baseUrl}/${imagePath.replace(/\\/g, '/')}`;
 }
 
 exports.addProduct = async (req, res) => {
   const { name, price, description } = req.body;
-  const imagePath = req.file ? req.file.path : null;
+  const imagePath = req.file ? req.file.filename : null;
 
   if (!name || !price || !description || !imagePath) {
     if (imagePath) {
@@ -139,7 +141,7 @@ exports.getProductById = async (req, res) => {
 exports.updateProduct = async (req, res) => {
   const { id } = req.params;
   const { name, price, description } = req.body;
-  const newImagePath = req.file ? req.file.path : null;
+  const newImagePath = req.file ? req.file.filename : null;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     if (newImagePath) {
@@ -262,9 +264,11 @@ exports.deleteProduct = async (req, res) => {
       });
     }
     if (product.image) {
-      fs.unlink(product.image, (error) => {
-        if (error) {
-          console.error("Error while deleting product image file: ", error);
+      const imagePath = path.join(__dirname, "../uploads", product.image);
+      fs.unlink(imagePath, (error) => {
+        if (error && error.code !== "ENOENT") {
+          // Ignore file-not-found errors (ENOENT)
+          console.error("Error deleting image file:", err);
         }
       });
     }

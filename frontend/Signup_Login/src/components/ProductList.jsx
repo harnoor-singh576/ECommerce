@@ -14,7 +14,6 @@ const ProductList = ({ showMyProductsOnly = false }) => {
   const [messageType, setMessageType] = useState("");
   const [messageActive, setMessageActive] = useState(false);
   const [loading, setLoading] = useState(true);
-  
 
   const showMessage = (msg, type) => {
     setMessage(msg);
@@ -109,16 +108,15 @@ const ProductList = ({ showMyProductsOnly = false }) => {
     }
   };
 
-
   if (loading) {
     return <div className="container">Loading Products...</div>;
   }
 
   const getImageURL = (imagePath) => {
-  if (!imagePath) return null;
-  if (imagePath.startsWith('http')) return imagePath;
-  return `${API_BASE_URL}/uploads/${imagePath}`;
-};
+    if (!imagePath) return null;
+    if (imagePath.startsWith("http")) return imagePath;
+    return `${API_BASE_URL}/uploads/${imagePath}`;
+  };
 
   return (
     <div className="container product-list-container">
@@ -141,11 +139,11 @@ const ProductList = ({ showMyProductsOnly = false }) => {
               (typeof product.user === "object" && product.user?._id) ||
               (typeof product.user === "string" && product.user) ||
               null;
-              const currentUserId = user?.id;
-              const canEdit =
-              user && productOwnerId && String(currentUserId) === String(productOwnerId);
-                      
-           
+            const currentUserId = user?.id;
+            const canEdit =
+              user &&
+              productOwnerId &&
+              String(currentUserId) === String(productOwnerId);
 
             // Log only in development to avoid console clutter
             if (!product.user && process.env.NODE_ENV === "development") {
@@ -153,18 +151,21 @@ const ProductList = ({ showMyProductsOnly = false }) => {
                 `Product.user is null or undefined for product: ${product.name} (ID: ${product._id})`
               );
             }
-            
 
             return (
               <div key={product._id} className="product-card">
                 {product.image && (
                   <div className="image-container">
-                  <img
-                    src={getImageURL(product.image)}
-                    alt={product.name}
-                    // Inline styles for demonstration, ideally use a CSS class
-                    className="product-image"
-                  />
+                    <img
+                      src={
+                        product.image.startsWith("http")
+                          ? product.image
+                          : `${API_BASE_URL}/uploads/${product.image}`
+                      }
+                      alt={product.name}
+                      // Inline styles for demonstration, ideally use a CSS class
+                      className="product-image"
+                    />
                   </div>
                 )}
                 <h3>{product.name}</h3>
@@ -176,28 +177,32 @@ const ProductList = ({ showMyProductsOnly = false }) => {
                     ? product.user.username || product.user.email || "Unknown"
                     : "Unknown"}
                 </small>
+                <div className="product-actions">
+                  <Link to={`/products/${product._id}`} className="view-button">
+                    View Details
+                  </Link>
+                  {canEdit && (
+                    <>
+                      {console.log(
+                        `Rendering buttons for product: ${product.name} (ID: ${product._id})`
+                      )}
+                      {console.log("Product ID:", product._id)}
+                      <Link
+                        to={`/edit-product/${product._id}`}
+                        className="edit-button"
+                      >
+                        Edit
+                      </Link>
 
-                {canEdit && (
-                  <div className="product-actions">
-                    {console.log(
-                      `Rendering buttons for product: ${product.name} (ID: ${product._id})`
-                    )}
-                    {console.log("Product ID:", product._id)}
-                    <Link
-                      to={`/edit-product/${product._id}`}
-                      className="edit-button"
-                    >
-                      Edit
-                    </Link>
-
-                    <button
-                      onClick={() => handleDelete(product._id)}
-                      className="delete-button"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                )}
+                      <button
+                        onClick={() => handleDelete(product._id)}
+                        className="delete-button"
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             );
           })}

@@ -2,13 +2,15 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import InputGroup from "./InputGroup";
 import MessageDisplay from "./MessageDisplay";
+import { useAuth } from "../contexts/AuthContext";
 import "../index.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-const EditProductForm = ({ user }) => {
+const EditProductForm = () => {
   const { id } = useParams(); // Get product ID from URL
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [productForm, setProductForm] = useState({
     name: "",
     price: "",
@@ -19,9 +21,10 @@ const EditProductForm = ({ user }) => {
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
   const [messageActive, setMessageActive] = useState(false);
-  const [loading, setLoading] = useState(false); // Initial loading for fetching product
-  const [submitting, setSubmitting] = useState(false); // Loading for form submission
-  const [initialLoading, setInitialLoading] = useState(true);
+  const [isFetching, setIsFetching] = useState(false);
+const [isSubmitting, setIsSubmitting] = useState(false);
+ 
+  
 
   const showMessage = (msg, type) => {
     setMessage(msg);
@@ -37,27 +40,36 @@ const EditProductForm = ({ user }) => {
   // Fetch product data on component mount
   useEffect(() => {
     const fetchProduct = async () => {
-      setInitialLoading(true);
+      setIsFetching(true);
       try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          showMessage("Authentication token missing.", "error");
+          navigate("/login");
+          return;
+        }
         const response = await fetch(`${API_BASE_URL}/products/${id}`);
         const data = await response.json();
 
         if (response.ok && data.product) {
+          const productOwnerId =
+            (typeof data.product.user === "object" && data.product.user?._id) ||
+            (typeof data.product.user === "string" && data.product.user) ||
+            null;
+          if (user && productOwnerId && String(productOwnerId) !== String(user.id)) {
+            showMessage("You are not authorized to edit this product.", "error");
+            navigate("/products");
+            return;
+          }        
           setProductForm({
-            name: data.product.name,
-            price: data.product.price,
-            description: data.product.description,
+            name: data.product.name || "",
+            price: data.product.price ? data.product.price.toString() : "",
+            description: data.product.description || "",
             image: null,
-            currentImageUrl: data.product.image,
+            currentImageUrl: data.product.image || "",
           });
-          // Client-side owner check for UX (backend provides ultimate security)
-          if (user && data.product.user && data.product.user._id !== user.id) {
-            showMessage(
-              "You are not authorized to edit this product.",
-              "error"
-            );
-            navigate("/products"); // Redirect if not owner
-          }
+          
+          
         } else {
           showMessage(data.message || "Product not found.", "error");
           navigate("/products"); // Redirect if product not found
@@ -70,17 +82,14 @@ const EditProductForm = ({ user }) => {
         );
         navigate("/products"); // Redirect on network error
       } finally {
-        setLoading(false);
+        setIsFetching(false);
       }
     };
 
-    if (user) {
-      // Only try to fetch if user is logged in
+    
+      
       fetchProduct();
-    } else {
-      // If user is not logged in, rely on ProtectedRoute to redirect
-      setLoading(false);
-    }
+    
   }, [id, navigate, user]); // Re-fetch if ID or user changes
 
   const handleChange = (e) => {
@@ -94,7 +103,7 @@ const EditProductForm = ({ user }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setSubmitting(true);
+    setIsSubmitting(true);
     setMessage("");
     setMessageType("");
 
@@ -128,7 +137,7 @@ const EditProductForm = ({ user }) => {
     const token = localStorage.getItem("token");
     if (!token) {
       showMessage("You must be logged in to edit a product.", "error");
-      setSubmitting(false);
+      setLoading(false);
       return;
     }
 
@@ -145,7 +154,7 @@ const EditProductForm = ({ user }) => {
       const response = await fetch(`${API_BASE_URL}/products/${id}`, {
         method: "PUT",
         headers: {
-          "Content-Type": "application/json",
+          
           Authorization: `Bearer ${token}`,
         },
         body: formData,
@@ -171,11 +180,11 @@ const EditProductForm = ({ user }) => {
         "error"
       );
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
-  if (loading) {
+  if (isFetching) {
     return <div className="container">Loading product for editing...</div>;
   }
 
@@ -202,6 +211,7 @@ const EditProductForm = ({ user }) => {
           value={productForm.price}
           onChange={handleChange}
           required
+          step="0.01"
         />
         <InputGroup
           label="Description"
@@ -216,10 +226,9 @@ const EditProductForm = ({ user }) => {
           <div style={{ marginBottom: "15px", textAlign: "center" }}>
             <label>Current Image:</label>
             <img
-              src={`${API_BASE_URL}/${productForm.currentImageUrl.replace(
-                /\\/g,
-                "/"
-              )}`} // Adjust path for URL
+              src={productForm.currentImageUrl.startsWith("http")
+                  ? productForm.currentImageUrl
+                  : `${API_BASE_URL}/uploads/${productForm.currentImageUrl}`} // Adjust path for URL
               alt="Current Product"
               style={{
                 maxWidth: "200px",
@@ -230,18 +239,35 @@ const EditProductForm = ({ user }) => {
             />
           </div>
         )}
+
+        {productForm.image && (
+  <div style={{ marginBottom: "15px", textAlign: "center" }}>
+    <label>New Image Preview:</label>
+    <img
+      src={URL.createObjectURL(productForm.image)}
+      alt="New Product Preview"
+      style={{
+        maxWidth: "200px",
+        maxHeight: "200px",
+        border: "1px solid #ccc",
+        marginTop: "5px",
+      }}
+    />
+  </div>
+)}
+
         <InputGroup
           label="Upload New Product Image (Optional)"
           type="file"
           id="edit-product-image"
           name="image"
-          value={productForm.image}
+          
           onChange={handleChange}
           accept="image/*"
         />
 
-        <button type="submit" disabled={submitting}>
-          {submitting ? (
+        <button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? (
             <>
               <span className="loading-spinner"></span> Updating Product...
             </>
