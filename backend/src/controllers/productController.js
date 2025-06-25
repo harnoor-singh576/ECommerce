@@ -9,8 +9,10 @@ const getImageURL = (imagePath,req) =>{
     return null;
   }
   const baseUrl = `${req.protocol}://${req.get('host')}`;
-  const normalizedPath = imagePath.replace(/^uploads[\\/]/, "").replace(/\\/g, "/");
-  return `${baseUrl}/${imagePath.replace(/\\/g, '/')}`;
+  const URL = `${baseUrl}/uploads/${imagePath.replace(/\\/g, '/')}`;
+  console.log(URL);
+  
+  return URL;
 }
 
 exports.addProduct = async (req, res) => {
@@ -142,6 +144,7 @@ exports.updateProduct = async (req, res) => {
   const { id } = req.params;
   const { name, price, description } = req.body;
   const newImagePath = req.file ? req.file.filename : null;
+
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     if (newImagePath) {

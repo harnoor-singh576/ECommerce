@@ -103,7 +103,9 @@ const ProductDetail = ({ user }) => {
       />
       <div className="product-detail-content">
         <img
-          src={`${API_BASE_URL}/${product.image.replace(/\\/g, "/")}`}
+          src={product.image.startsWith("http")
+                          ? product.image
+                          : `${API_BASE_URL}/uploads/${product.image}`}
           alt={product.name}
           className="product-detail-image"
         />
